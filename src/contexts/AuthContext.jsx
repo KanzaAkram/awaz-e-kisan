@@ -1,11 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  signInWithPhoneNumber,
+  signInWithPopup,
+  GoogleAuthProvider,
   signOut,
-  onAuthStateChanged,
-  RecaptchaVerifier
+  onAuthStateChanged
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
@@ -26,64 +24,50 @@ export const AuthProvider = ({ children }) => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Sign up with email
-  const signup = async (email, password, name, language = 'urdu') => {
+  // Sign in with Google
+  const loginWithGoogle = async () => {
     try {
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // Create user document in Firestore
-      await setDoc(doc(db, 'users', result.user.uid), {
-        name,
-        email,
-        language,
-        phone: null,
-        createdAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
-        queriesCount: 0,
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({
+        prompt: 'select_account'
       });
-
-      toast.success('خوش آمدید! Account created successfully!');
-      return result.user;
-    } catch (error) {
-      toast.error(error.message);
-      throw error;
-    }
-  };
-
-  // Sign in with email
-  const login = async (email, password) => {
-    try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
       
-      // Update last login
-      await setDoc(doc(db, 'users', result.user.uid), {
-        lastLogin: new Date().toISOString(),
-      }, { merge: true });
-
-      toast.success('خوش آمدید! Welcome back!');
-      return result.user;
-    } catch (error) {
-      toast.error('Login failed: ' + error.message);
-      throw error;
-    }
-  };
-
-  // Sign in with phone (for future feature phone support)
-  const setupRecaptcha = (containerId) => {
-    return new RecaptchaVerifier(auth, containerId, {
-      size: 'invisible',
-      callback: () => {
-        // reCAPTCHA solved
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      
+      // Check if user document exists
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      
+      if (!userDoc.exists()) {
+        // Create new user document
+        await setDoc(doc(db, 'users', user.uid), {
+          name: user.displayName || 'Farmer',
+          email: user.email,
+          language: 'urdu',
+          photoURL: user.photoURL || null,
+          createdAt: new Date().toISOString(),
+          lastLogin: new Date().toISOString(),
+          queriesCount: 0,
+        });
+        toast.success('خوش آمدید! Welcome to Awaz-e-Kisan!');
+      } else {
+        // Update last login
+        await setDoc(doc(db, 'users', user.uid), {
+          lastLogin: new Date().toISOString(),
+        }, { merge: true });
+        toast.success('خوش آمدید! Welcome back!');
       }
-    });
-  };
 
-  const signInWithPhone = async (phoneNumber, appVerifier) => {
-    try {
-      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
-      return confirmationResult;
+      return user;
     } catch (error) {
-      toast.error('Phone authentication failed: ' + error.message);
+      console.error('Google Sign-In error:', error);
+      if (error.code === 'auth/popup-closed-by-user') {
+        toast.error('Sign-in cancelled');
+      } else if (error.code === 'auth/popup-blocked') {
+        toast.error('Popup blocked! Please allow popups for this site.');
+      } else {
+        toast.error('Login failed: ' + error.message);
+      }
       throw error;
     }
   };
@@ -127,11 +111,8 @@ export const AuthProvider = ({ children }) => {
   const value = {
     currentUser,
     userData,
-    signup,
-    login,
+    loginWithGoogle,
     logout,
-    setupRecaptcha,
-    signInWithPhone,
   };
 
   return (
