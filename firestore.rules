@@ -40,5 +40,53 @@ service cloud.firestore {
     match /analytics/{document=**} {
       allow read: if isAuthenticated();
     }
+    
+    // Crop calendars - users can only access their own calendars
+    match /cropCalendars/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+      
+      // Activities within crop calendar
+      match /activities/{activityId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId);
+      }
+    }
+    
+    // Reminders - users can only access their own reminders
+    match /reminders/{userId}/scheduled/{reminderId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+    
+    // Community insights - aggregated anonymous data
+    match /communityInsights/{region} {
+      allow read: if isAuthenticated();
+      // Only backend functions can write
+    }
+    
+    // Disease alerts - regional data, all authenticated users can read
+    match /diseaseAlerts/{alertId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      // Anyone can report a disease
+    }
+    
+    // Market prices - public read, function write
+    match /marketPrices/{priceId} {
+      allow read: if isAuthenticated();
+    }
+    
+    // Activity completions for community tracking
+    match /activityCompletions/{region}/completions/{completionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+    }
   }
 }

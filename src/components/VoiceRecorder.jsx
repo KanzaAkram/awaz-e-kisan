@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FaMicrophone, FaStop, FaPlay, FaPause } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
-import { httpsCallable } from 'firebase/functions';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { functions, db, storage } from '../firebase';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { speechToText, askAssistant } from '../services/aiService';
 
 const VoiceRecorder = () => {
   const { currentUser, userData } = useAuth();
@@ -68,77 +67,45 @@ const VoiceRecorder = () => {
     setResponseAudioUrl('');
 
     try {
-      // Step 1: Upload audio to storage
-      const audioRef = ref(storage, `voice-input/${currentUser.uid}/${Date.now()}.webm`);
-      await uploadBytes(audioRef, audioBlob);
-      const audioUrl = await getDownloadURL(audioRef);
-
-      // Step 2: Speech-to-Text
-      toast.loading('🎧 Converting speech to text...');
-      const sttFunction = httpsCallable(functions, 'speechToText');
+      // Step 1: Speech-to-Text (Client-side, no Cloud Functions!)
+      toast.loading('🎧 آواز سن رہے ہیں...');
       
-      // Convert blob to base64
-      const reader = new FileReader();
-      reader.readAsDataURL(audioBlob);
+      const sttResult = await speechToText(audioBlob, selectedLanguage);
       
-      reader.onloadend = async () => {
-        const base64Audio = reader.result.split(',')[1];
-        
-        const sttResult = await sttFunction({
-          audio: base64Audio,
-          language: selectedLanguage,
-        });
-
-        const transcribedText = sttResult.data.text;
-        const detectedLanguage = sttResult.data.language;
-        setTranscription(transcribedText);
-        toast.dismiss();
-        toast.success('✅ Speech recognized!');
-
-        // Step 3: Ask LLM
-        toast.loading('🤔 Thinking...');
-        const askFunction = httpsCallable(functions, 'askAssistant');
-        const llmResult = await askFunction({
-          question: transcribedText,
-          language: detectedLanguage,
-          userId: currentUser.uid,
-        });
-
-        const answerText = llmResult.data.answer;
-        setResponse(answerText);
-        toast.dismiss();
-        toast.success('💡 Answer ready!');
-
-        // Step 4: Text-to-Speech
-        toast.loading('🔊 Generating voice response...');
-        const ttsFunction = httpsCallable(functions, 'textToSpeech');
-        const ttsResult = await ttsFunction({
-          text: answerText,
-          language: detectedLanguage,
-          userId: currentUser.uid,
-        });
-
-        const audioResponseUrl = ttsResult.data.audioUrl;
-        setResponseAudioUrl(audioResponseUrl);
-        toast.dismiss();
-        toast.success('🎵 Voice ready! Click play to listen.');
-
-        // Save to Firestore history
-        await addDoc(collection(db, 'queries', currentUser.uid, 'history'), {
-          question: transcribedText,
-          answer: answerText,
-          language: detectedLanguage,
-          audioInputUrl: audioUrl,
-          audioOutputUrl: audioResponseUrl,
-          timestamp: serverTimestamp(),
-        });
-
-        setIsProcessing(false);
-      };
-    } catch (error) {
-      console.error('Processing error:', error);
+      const transcribedText = sttResult.text;
+      const detectedLanguage = sttResult.language;
+      
+      setTranscription(transcribedText);
       toast.dismiss();
-      toast.error('Processing failed: ' + error.message);
+      toast.success('✅ سمجھ آ گیا!');
+
+      // Step 2: Ask AI Assistant (Client-side!)
+      toast.loading('🤔 جواب سوچ رہے ہیں...');
+      
+      const llmResult = await askAssistant(transcribedText, detectedLanguage);
+      
+      const answerText = llmResult.answer;
+      setResponse(answerText);
+      toast.dismiss();
+      toast.success('💡 جواب تیار ہے!');
+
+      // Step 3: Save to Firestore (only data storage, no functions)
+      await addDoc(collection(db, 'queries', currentUser.uid, 'history'), {
+        question: transcribedText,
+        answer: answerText,
+        language: detectedLanguage,
+        timestamp: new Date().toISOString(),
+      });
+
+      setIsProcessing(false);
+      
+      // Note: Text-to-Speech removed for now (would require ElevenLabs API)
+      // You can add it later if needed
+      
+    } catch (error) {
+      console.error('❌ Processing error:', error);
+      toast.dismiss();
+      toast.error(`خرابی: ${error.message || 'دوبارہ کوشش کریں'}`);
       setIsProcessing(false);
     }
   };

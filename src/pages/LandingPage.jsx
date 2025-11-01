@@ -115,6 +115,9 @@ const LandingPage = () => {
             {/* Desktop Menu */}
             <div className="hidden md:flex items-center gap-6">
               <a href="#features" className="text-gray-700 hover:text-farm-green-600 font-medium transition">Features</a>
+              <a href="#training" className="text-blue-700 hover:text-blue-800 font-bold transition flex items-center gap-1">
+                🎓 Training
+              </a>
               <a href="#how-it-works" className="text-gray-700 hover:text-farm-green-600 font-medium transition">How It Works</a>
               <a href="#testimonials" className="text-gray-700 hover:text-farm-green-600 font-medium transition">Testimonials</a>
               <Link to="/login" className="px-6 py-2 bg-farm-green-600 text-white rounded-full font-semibold hover:bg-farm-green-700 transition">
@@ -142,6 +145,7 @@ const LandingPage = () => {
               className="md:hidden mt-4 pb-4 space-y-3"
             >
               <a href="#features" className="block text-gray-700 hover:text-farm-green-600 font-medium">Features</a>
+              <a href="#training" className="block text-blue-700 hover:text-blue-800 font-bold">🎓 Training & Education</a>
               <a href="#how-it-works" className="block text-gray-700 hover:text-farm-green-600 font-medium">How It Works</a>
               <a href="#testimonials" className="block text-gray-700 hover:text-farm-green-600 font-medium">Testimonials</a>
               <Link to="/login" className="block w-full text-center px-6 py-2 bg-farm-green-600 text-white rounded-full font-semibold">
@@ -425,6 +429,181 @@ const LandingPage = () => {
               </motion.div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Training & Education Section */}
+      <section id="training" className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 py-20 relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          }}></div>
+        </div>
+
+        {/* Floating Icons */}
+        <motion.div
+          animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }}
+          transition={{ duration: 6, repeat: Infinity }}
+          className="absolute top-10 right-10 text-7xl opacity-20"
+        >
+          🎓
+        </motion.div>
+        <motion.div
+          animate={{ y: [0, -30, 0], rotate: [0, -5, 0] }}
+          transition={{ duration: 8, repeat: Infinity }}
+          className="absolute bottom-10 left-10 text-6xl opacity-20"
+        >
+          📚
+        </motion.div>
+
+        <div className="relative max-w-7xl mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <div className="inline-block bg-white/10 backdrop-blur-sm px-6 py-2 rounded-full mb-4">
+              <span className="text-white font-semibold">🎙️ NEW FEATURE</span>
+            </div>
+            <h2 className="text-5xl md:text-6xl font-bold text-white mb-4">
+              🎓 AI Training & Education Center
+            </h2>
+            <p className="text-2xl urdu-text font-bold text-blue-100 mb-4">
+              کسانوں کا تربیتی مرکز
+            </p>
+            <p className="text-xl text-blue-100 max-w-3xl mx-auto">
+              Learn modern farming techniques through AI-generated podcasts in Urdu
+              <br />
+              <span className="urdu-text">اردو میں AI سے بنے پوڈکاسٹ کے ذریعے جدید کاشتکاری سیکھیں</span>
+            </p>
+          </motion.div>
+
+          {/* Training Topics Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            {[
+              {
+                icon: '🌿',
+                title: 'Organic Farming',
+                titleUrdu: 'نامیاتی کاشتکاری',
+                desc: 'Natural farming methods',
+                color: 'from-green-400 to-green-600'
+              },
+              {
+                icon: '🔄',
+                title: 'Crop Rotation',
+                titleUrdu: 'فصلوں کی تبدیلی',
+                desc: 'Improve soil fertility',
+                color: 'from-blue-400 to-blue-600'
+              },
+              {
+                icon: '🌦️',
+                title: 'Climate-Smart',
+                titleUrdu: 'موسمی تبدیلی',
+                desc: 'Adapt to weather changes',
+                color: 'from-orange-400 to-orange-600'
+              },
+              {
+                icon: '💚',
+                title: 'Fertilizer Use',
+                titleUrdu: 'کھاد کا استعمال',
+                desc: 'Maximize crop yield',
+                color: 'from-purple-400 to-purple-600'
+              },
+              {
+                icon: '💧',
+                title: 'Water Management',
+                titleUrdu: 'پانی کا استعمال',
+                desc: 'Save water efficiently',
+                color: 'from-cyan-400 to-cyan-600'
+              },
+              {
+                icon: '🌾',
+                title: 'Wheat Farming',
+                titleUrdu: 'گندم کی کاشت',
+                desc: 'Expert wheat techniques',
+                color: 'from-yellow-400 to-yellow-600'
+              }
+            ].map((topic, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ scale: 1.05, y: -5 }}
+                className={`bg-gradient-to-br ${topic.color} rounded-xl shadow-lg p-6 text-white cursor-pointer group`}
+              >
+                <div className="text-5xl mb-3 transform group-hover:scale-110 transition-transform">
+                  {topic.icon}
+                </div>
+                <h3 className="text-xl font-bold mb-1">{topic.title}</h3>
+                <p className="text-lg urdu-text font-semibold mb-2 opacity-90">
+                  {topic.titleUrdu}
+                </p>
+                <p className="text-sm text-white/80">{topic.desc}</p>
+                <div className="mt-3 flex items-center gap-2 text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                  Listen Now <FaArrowRight className="transform group-hover:translate-x-1 transition-transform" />
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Key Features */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="bg-white/10 backdrop-blur-md rounded-2xl p-8 mb-8"
+          >
+            <h3 className="text-3xl font-bold text-white text-center mb-8">
+              What You'll Learn • آپ کیا سیکھیں گے
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[
+                { icon: '🎧', text: 'AI-generated podcasts in Urdu', textUrdu: 'اردو میں AI سے بنے پوڈکاسٹ' },
+                { icon: '🗣️', text: 'Ask any farming question', textUrdu: 'کوئی بھی کاشتکاری کا سوال پوچھیں' },
+                { icon: '📖', text: 'Read text or listen to audio', textUrdu: 'متن پڑھیں یا آڈیو سنیں' },
+                { icon: '💾', text: 'Save & replay anytime', textUrdu: 'محفوظ کریں اور کبھی بھی دوبارہ سنیں' }
+              ].map((feature, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, x: index % 2 === 0 ? -20 : 20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  className="flex items-center gap-4 bg-white/10 rounded-xl p-4"
+                >
+                  <div className="text-4xl">{feature.icon}</div>
+                  <div>
+                    <p className="text-white font-semibold">{feature.text}</p>
+                    <p className="text-blue-200 urdu-text text-sm">{feature.textUrdu}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* CTA Button */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className="text-center"
+          >
+            <Link
+              to="/dashboard"
+              className="inline-flex items-center gap-3 px-10 py-5 bg-white text-blue-700 rounded-full font-bold text-xl hover:bg-blue-50 transition-all shadow-2xl hover:shadow-3xl transform hover:scale-105"
+            >
+              <span className="text-3xl">🎓</span>
+              Start Learning Now
+              <FaArrowRight />
+            </Link>
+            <p className="mt-4 text-blue-200 urdu-text text-lg">
+              ابھی سیکھنا شروع کریں - بالکل مفت!
+            </p>
+          </motion.div>
         </div>
       </section>
 
