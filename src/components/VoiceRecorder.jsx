@@ -15,6 +15,7 @@ const VoiceRecorder = () => {
   const [response, setResponse] = useState('');
   const [isPlayingResponse, setIsPlayingResponse] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState(userData?.language || 'urdu');
+  const [conversationHistory, setConversationHistory] = useState([]);
 
   // Use browser's Web Speech API for speech recognition
   const recognitionRef = useRef(null);
@@ -127,7 +128,7 @@ const VoiceRecorder = () => {
     }
   };
 
-  // Process question and get AI response
+  // Process question and get AI response with conversation context
   const processQuestion = async (questionText) => {
     if (!questionText) return;
 
@@ -135,13 +136,34 @@ const VoiceRecorder = () => {
     setResponse('');
 
     try {
-      // Ask AI Assistant
+      // Ask AI Assistant with conversation history for context
       toast.loading('🤔 جواب سوچ رہے ہیں...');
       
-      const llmResult = await askAssistant(questionText, selectedLanguage);
+      // Build context from conversation history
+      let contextualQuestion = questionText;
+      if (conversationHistory.length > 0) {
+        // Add recent conversation context (last 3 exchanges)
+        const recentHistory = conversationHistory.slice(-3);
+        const contextParts = recentHistory.map(h => 
+          `Previous Q: ${h.question}\nPrevious A: ${h.answer}`
+        ).join('\n\n');
+        
+        contextualQuestion = `[Conversation Context]\n${contextParts}\n\n[Current Question]\n${questionText}\n\nNote: If this is a follow-up question, use the previous context to provide a coherent answer. If it's a new topic, answer directly.`;
+      }
+      
+      const llmResult = await askAssistant(contextualQuestion, selectedLanguage);
       
       const answerText = llmResult.answer;
       setResponse(answerText);
+      
+      // Update conversation history
+      const newEntry = {
+        question: questionText,
+        answer: answerText,
+        timestamp: new Date().toISOString(),
+      };
+      setConversationHistory([...conversationHistory, newEntry]);
+      
       toast.dismiss();
       toast.success('💡 جواب تیار ہے!');
 
@@ -151,6 +173,7 @@ const VoiceRecorder = () => {
         answer: answerText,
         language: selectedLanguage,
         timestamp: new Date().toISOString(),
+        conversationIndex: conversationHistory.length,
       });
 
       // Use Web Speech API for text-to-speech
@@ -275,26 +298,65 @@ const VoiceRecorder = () => {
     return classes[lang] || 'urdu-text';
   };
 
+  // Clear conversation history
+  const clearConversation = () => {
+    setConversationHistory([]);
+    setTranscription('');
+    setResponse('');
+    toast.success('✅ نئی گفتگو شروع کی / New conversation started');
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-6">
-      {/* Language Selector */}
-      <div className="mb-6 flex justify-center gap-4">
-        {['urdu', 'punjabi', 'sindhi'].map((lang) => (
-          <button
-            key={lang}
-            onClick={() => setSelectedLanguage(lang)}
-            className={`px-6 py-2 rounded-full font-semibold transition-all ${
-              selectedLanguage === lang
-                ? 'bg-farm-green-600 text-white shadow-lg'
-                : 'bg-white text-farm-green-700 hover:bg-farm-green-50'
-            }`}
+      {/* Header with Language Selector and Clear Button */}
+      <div className="mb-6 flex justify-between items-center gap-4">
+        <div className="flex gap-4">
+          {['urdu', 'punjabi', 'sindhi'].map((lang) => (
+            <button
+              key={lang}
+              onClick={() => setSelectedLanguage(lang)}
+              className={`px-6 py-2 rounded-full font-semibold transition-all ${
+                selectedLanguage === lang
+                  ? 'bg-farm-green-600 text-white shadow-lg'
+                  : 'bg-white text-farm-green-700 hover:bg-farm-green-50'
+              }`}
+            >
+              {lang === 'urdu' && 'اردو'}
+              {lang === 'punjabi' && 'ਪੰਜਾਬੀ'}
+              {lang === 'sindhi' && 'سنڌي'}
+            </button>
+          ))}
+        </div>
+        
+        {/* New Conversation Button */}
+        {conversationHistory.length > 0 && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={clearConversation}
+            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full font-semibold shadow-lg transition-all flex items-center gap-2"
           >
-            {lang === 'urdu' && 'اردو'}
-            {lang === 'punjabi' && 'ਪੰਜਾਬੀ'}
-            {lang === 'sindhi' && 'سنڌي'}
-          </button>
-        ))}
+            <span>🔄</span>
+            <span dir="rtl">نئی گفتگو / New Chat</span>
+          </motion.button>
+        )}
       </div>
+      
+      {/* Conversation History Indicator */}
+      {conversationHistory.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 bg-blue-50 border-2 border-blue-200 rounded-xl p-3 text-center"
+        >
+          <p className="text-sm text-blue-700 font-semibold" dir="rtl">
+            💬 گفتگو جاری ہے - {conversationHistory.length} سوالات / Conversation active - {conversationHistory.length} questions asked
+          </p>
+          <p className="text-xs text-blue-600 mt-1" dir="rtl">
+            آپ پچھلے سوالات سے متعلق سوال پوچھ سکتے ہیں / You can ask follow-up questions
+          </p>
+        </motion.div>
+      )}
 
       {/* Recording Button */}
       <div className="flex flex-col items-center mb-8">
@@ -424,6 +486,50 @@ const VoiceRecorder = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Conversation History */}
+      {conversationHistory.length > 1 && (
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-8"
+        >
+          <div className="bg-white rounded-2xl p-6 shadow-lg">
+            <h3 className="text-xl font-bold text-farm-green-800 mb-4" dir="rtl">
+              📜 پچھلی گفتگو / Previous Conversation
+            </h3>
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {conversationHistory.slice(0, -1).reverse().map((entry, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="border-l-4 border-farm-green-300 pl-4 py-2 bg-gray-50 rounded-r-lg"
+                >
+                  <div className="mb-2">
+                    <p className="text-xs text-gray-500 mb-1">
+                      Q: {new Date(entry.timestamp).toLocaleTimeString('ur-PK', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </p>
+                    <p className="text-gray-800 font-semibold" dir="rtl">
+                      {entry.question}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-farm-green-600 mb-1">A:</p>
+                    <p className="text-gray-600 text-sm" dir="rtl">
+                      {entry.answer}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 };

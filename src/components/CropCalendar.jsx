@@ -23,6 +23,46 @@ import {
 } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
+// Crop varieties for each crop type
+const CROP_VARIETIES = {
+  wheat: [
+    { name: 'Faisalabad 2008', yield: '40-45 maund/acre', duration: 150, urdu: 'فیصل آباد 2008' },
+    { name: 'Punjab 2016', yield: '38-42 maund/acre', duration: 145, urdu: 'پنجاب 2016' },
+    { name: 'Akbar 2019', yield: '42-48 maund/acre', duration: 155, urdu: 'اکبر 2019' },
+    { name: 'Galaxy 2013', yield: '36-40 maund/acre', duration: 140, urdu: 'گلیکسی 2013' },
+  ],
+  rice: [
+    { name: 'Basmati 385', yield: '25-30 maund/acre', duration: 120, urdu: 'باسمتی 385' },
+    { name: 'Super Basmati', yield: '28-32 maund/acre', duration: 125, urdu: 'سپر باسمتی' },
+    { name: 'Kainat', yield: '30-35 maund/acre', duration: 115, urdu: 'کائنات' },
+    { name: 'Chenab', yield: '26-30 maund/acre', duration: 118, urdu: 'چناب' },
+  ],
+  cotton: [
+    { name: 'BT Cotton (IUB-13)', yield: '30-35 maund/acre', duration: 180, urdu: 'بی ٹی کپاس IUB-13' },
+    { name: 'FH-142', yield: '32-38 maund/acre', duration: 175, urdu: 'FH-142' },
+    { name: 'MNH-886', yield: '28-33 maund/acre', duration: 185, urdu: 'MNH-886' },
+    { name: 'CIM-602', yield: '35-40 maund/acre', duration: 170, urdu: 'CIM-602' },
+  ],
+  sugarcane: [
+    { name: 'CPF-246', yield: '500-600 maund/acre', duration: 365, urdu: 'CPF-246' },
+    { name: 'HSF-240', yield: '550-650 maund/acre', duration: 370, urdu: 'HSF-240' },
+    { name: 'CPF-243', yield: '480-580 maund/acre', duration: 360, urdu: 'CPF-243' },
+    { name: 'SPF-213', yield: '520-620 maund/acre', duration: 365, urdu: 'SPF-213' },
+  ],
+  maize: [
+    { name: 'Pioneer Hybrid 30Y87', yield: '35-40 maund/acre', duration: 90, urdu: 'پائنیر 30Y87' },
+    { name: 'Monsanto DK-6142', yield: '38-43 maund/acre', duration: 95, urdu: 'مونسانٹو DK-6142' },
+    { name: 'Syngenta NK-6621', yield: '32-38 maund/acre', duration: 85, urdu: 'سنجنٹا NK-6621' },
+    { name: 'Local Akbar', yield: '28-33 maund/acre', duration: 88, urdu: 'مقامی اکبر' },
+  ],
+  vegetables: [
+    { name: 'Tomato (Rio Grande)', yield: '50-60 maund/acre', duration: 60, urdu: 'ٹماٹر (ریو گرانڈے)' },
+    { name: 'Potato (Cardinal)', yield: '150-180 maund/acre', duration: 90, urdu: 'آلو (کارڈنل)' },
+    { name: 'Onion (Phulkara)', yield: '100-120 maund/acre', duration: 120, urdu: 'پیاز (پھلکڑا)' },
+    { name: 'Mixed Seasonal', yield: '40-50 maund/acre', duration: 60, urdu: 'مخلوط موسمی' },
+  ],
+};
+
 const CROP_CALENDARS = {
   wheat: {
     name: 'Wheat / گندم',
@@ -143,13 +183,15 @@ const CROP_CALENDARS = {
 };
 
 const CropCalendar = () => {
-  const [farmerData, setFarmerData] = useState(null);
-  const [showForm, setShowForm] = useState(true);
+  const [savedCalendars, setSavedCalendars] = useState([]);
+  const [activeCalendarIndex, setActiveCalendarIndex] = useState(0);
+  const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     farmerName: '',
     location: '',
     acres: '',
-    crop: 'wheat'
+    crop: 'wheat',
+    variety: 'Faisalabad 2008'
   });
   const [selectedCrop, setSelectedCrop] = useState('wheat');
   const [currentMonth, setCurrentMonth] = useState(new Date('2025-11-05'));
@@ -161,6 +203,107 @@ const CropCalendar = () => {
   const [weatherLoading, setWeatherLoading] = useState(false);
 
   const cropData = CROP_CALENDARS[selectedCrop];
+  const farmerData = savedCalendars[activeCalendarIndex] || null;
+
+  // Load saved calendars from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('awaz-calendars');
+    if (saved) {
+      try {
+        const calendars = JSON.parse(saved);
+        setSavedCalendars(calendars);
+        if (calendars.length > 0) {
+          setSelectedCrop(calendars[0].crop);
+          // Load activities and notes for first calendar
+          const savedActivities = localStorage.getItem(`activities-${calendars[0].id}`);
+          const savedNotes = localStorage.getItem(`notes-${calendars[0].id}`);
+          if (savedActivities) setCompletedActivities(JSON.parse(savedActivities));
+          if (savedNotes) setNotes(JSON.parse(savedNotes));
+        } else {
+          setShowForm(true);
+        }
+      } catch (e) {
+        console.error('Error loading calendars:', e);
+        setShowForm(true);
+      }
+    } else {
+      setShowForm(true);
+    }
+  }, []);
+
+  // Save activities when they change
+  useEffect(() => {
+    if (farmerData?.id) {
+      localStorage.setItem(`activities-${farmerData.id}`, JSON.stringify(completedActivities));
+    }
+  }, [completedActivities, farmerData]);
+
+  // Save notes when they change
+  useEffect(() => {
+    if (farmerData?.id) {
+      localStorage.setItem(`notes-${farmerData.id}`, JSON.stringify(notes));
+    }
+  }, [notes, farmerData]);
+
+  // Load activities and notes when switching calendars
+  useEffect(() => {
+    if (farmerData?.id) {
+      const savedActivities = localStorage.getItem(`activities-${farmerData.id}`);
+      const savedNotes = localStorage.getItem(`notes-${farmerData.id}`);
+      if (savedActivities) setCompletedActivities(JSON.parse(savedActivities));
+      else setCompletedActivities([]);
+      if (savedNotes) setNotes(JSON.parse(savedNotes));
+      else setNotes({});
+      setSelectedCrop(farmerData.crop);
+    }
+  }, [activeCalendarIndex, farmerData]);
+
+  // Geocode location to get coordinates
+  const geocodeLocation = async (location) => {
+    try {
+      // Use OpenMeteo's geocoding API
+      const response = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`
+      );
+      const data = await response.json();
+      
+      if (data.results && data.results.length > 0) {
+        return {
+          latitude: data.results[0].latitude,
+          longitude: data.results[0].longitude,
+          name: data.results[0].name,
+          country: data.results[0].country
+        };
+      }
+      
+      // Fallback to Pakistan cities if not found
+      const pakistanCities = {
+        'فیصل آباد': { latitude: 31.4504, longitude: 73.1350, name: 'Faisalabad' },
+        'faisalabad': { latitude: 31.4504, longitude: 73.1350, name: 'Faisalabad' },
+        'لاہور': { latitude: 31.5204, longitude: 74.3587, name: 'Lahore' },
+        'lahore': { latitude: 31.5204, longitude: 74.3587, name: 'Lahore' },
+        'کراچی': { latitude: 24.8607, longitude: 67.0011, name: 'Karachi' },
+        'karachi': { latitude: 24.8607, longitude: 67.0011, name: 'Karachi' },
+        'اسلام آباد': { latitude: 33.6844, longitude: 73.0479, name: 'Islamabad' },
+        'islamabad': { latitude: 33.6844, longitude: 73.0479, name: 'Islamabad' },
+        'multan': { latitude: 30.1575, longitude: 71.5249, name: 'Multan' },
+        'ملتان': { latitude: 30.1575, longitude: 71.5249, name: 'Multan' },
+        'peshawar': { latitude: 34.0151, longitude: 71.5249, name: 'Peshawar' },
+        'پشاور': { latitude: 34.0151, longitude: 71.5249, name: 'Peshawar' },
+      };
+      
+      const cityKey = location.toLowerCase().trim();
+      if (pakistanCities[cityKey]) {
+        return pakistanCities[cityKey];
+      }
+      
+      // Default to Faisalabad if nothing found
+      return { latitude: 31.4504, longitude: 73.1350, name: 'Faisalabad', country: 'Pakistan' };
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      return { latitude: 31.4504, longitude: 73.1350, name: 'Faisalabad', country: 'Pakistan' };
+    }
+  };
 
   // Fetch real-time weather data from OpenMeteo API
   useEffect(() => {
@@ -169,13 +312,11 @@ const CropCalendar = () => {
       
       setWeatherLoading(true);
       try {
-        // Default to Pakistan coordinates (Faisalabad)
-        // In production, you'd geocode the location first
-        const latitude = 31.4504; // Faisalabad, Pakistan
-        const longitude = 73.1350;
+        // Geocode the location first
+        const coords = await geocodeLocation(farmerData.location);
         
         const response = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia/Karachi`
+          `https://api.open-meteo.com/v1/forecast?latitude=${coords.latitude}&longitude=${coords.longitude}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia/Karachi`
         );
         
         const data = await response.json();
@@ -186,15 +327,17 @@ const CropCalendar = () => {
             humidity: data.current.relative_humidity_2m,
             precipitation: data.current.precipitation,
             weatherCode: data.current.weather_code,
-            windSpeed: data.current.wind_speed_10m,
+            windSpeed: Math.round(data.current.wind_speed_10m),
             maxTemp: Math.round(data.daily.temperature_2m_max[0]),
             minTemp: Math.round(data.daily.temperature_2m_min[0]),
-            rainChance: data.daily.precipitation_probability_max[0] || 0
+            rainChance: data.daily.precipitation_probability_max[0] || 0,
+            locationName: coords.name
           });
+          console.log('Weather data fetched for:', coords.name, data.current);
         }
       } catch (error) {
         console.error('Weather fetch error:', error);
-        toast.error('موسم کی معلومات نہیں مل سکیں');
+        toast.error('موسم کی معلومات نہیں مل سکیں / Could not fetch weather');
       } finally {
         setWeatherLoading(false);
       }
@@ -209,22 +352,22 @@ const CropCalendar = () => {
   // Get weather description from WMO code
   const getWeatherDescription = (code) => {
     const weatherCodes = {
-      0: { en: 'Clear sky', ur: 'صاف آسمان', icon: <FaSun /> },
-      1: { en: 'Mainly clear', ur: 'زیادہ تر صاف', icon: <FaSun /> },
-      2: { en: 'Partly cloudy', ur: 'جزوی ابر آلود', icon: <FaCloud /> },
-      3: { en: 'Overcast', ur: 'مکمل ابر آلود', icon: <FaCloud /> },
-      45: { en: 'Foggy', ur: 'دھند', icon: <FaCloud /> },
-      48: { en: 'Foggy', ur: 'دھند', icon: <FaCloud /> },
-      51: { en: 'Light drizzle', ur: 'ہلکی بارش', icon: <FaCloudRain /> },
-      53: { en: 'Drizzle', ur: 'بوندا باندی', icon: <FaCloudRain /> },
-      55: { en: 'Heavy drizzle', ur: 'تیز بوندا باندی', icon: <FaCloudRain /> },
-      61: { en: 'Light rain', ur: 'ہلکی بارش', icon: <FaCloudRain /> },
-      63: { en: 'Moderate rain', ur: 'بارش', icon: <FaCloudRain /> },
-      65: { en: 'Heavy rain', ur: 'تیز بارش', icon: <FaCloudRain /> },
-      80: { en: 'Rain showers', ur: 'بارش کی پھوار', icon: <FaCloudRain /> },
-      95: { en: 'Thunderstorm', ur: 'آندھی', icon: <FaCloudRain /> },
+      0: { en: 'Clear sky', ur: 'صاف آسمان', icon: 'FaSun' },
+      1: { en: 'Mainly clear', ur: 'زیادہ تر صاف', icon: 'FaSun' },
+      2: { en: 'Partly cloudy', ur: 'جزوی ابر آلود', icon: 'FaCloud' },
+      3: { en: 'Overcast', ur: 'مکمل ابر آلود', icon: 'FaCloud' },
+      45: { en: 'Foggy', ur: 'دھند', icon: 'FaCloud' },
+      48: { en: 'Foggy', ur: 'دھند', icon: 'FaCloud' },
+      51: { en: 'Light drizzle', ur: 'ہلکی بارش', icon: 'FaCloudRain' },
+      53: { en: 'Drizzle', ur: 'بوندا باندی', icon: 'FaCloudRain' },
+      55: { en: 'Heavy drizzle', ur: 'تیز بوندا باندی', icon: 'FaCloudRain' },
+      61: { en: 'Light rain', ur: 'ہلکی بارش', icon: 'FaCloudRain' },
+      63: { en: 'Moderate rain', ur: 'بارش', icon: 'FaCloudRain' },
+      65: { en: 'Heavy rain', ur: 'تیز بارش', icon: 'FaCloudRain' },
+      80: { en: 'Rain showers', ur: 'بارش کی پھوار', icon: 'FaCloudRain' },
+      95: { en: 'Thunderstorm', ur: 'آندھی', icon: 'FaCloudRain' },
     };
-    return weatherCodes[code] || { en: 'Clear', ur: 'صاف', icon: <FaSun /> };
+    return weatherCodes[code] || { en: 'Clear', ur: 'صاف', icon: 'FaSun' };
   };
 
   const handleFormSubmit = (e) => {
@@ -233,14 +376,65 @@ const CropCalendar = () => {
       toast.error('براہ کرم تمام خانے بھریں / Please fill all fields');
       return;
     }
-    setFarmerData(formData);
+    
+    // Create new calendar with unique ID
+    const newCalendar = {
+      ...formData,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString()
+    };
+    
+    const updatedCalendars = [...savedCalendars, newCalendar];
+    setSavedCalendars(updatedCalendars);
+    localStorage.setItem('awaz-calendars', JSON.stringify(updatedCalendars));
+    
+    // Set as active calendar
+    setActiveCalendarIndex(updatedCalendars.length - 1);
     setSelectedCrop(formData.crop);
+    setCompletedActivities([]);
+    setNotes({});
     setShowForm(false);
+    
+    // Reset form
+    setFormData({
+      farmerName: '',
+      location: '',
+      acres: '',
+      crop: 'wheat'
+    });
+    
     toast.success('کیلنڈر تیار ہو گیا! 🎉');
   };
 
   const handleEditDetails = () => {
     setShowForm(true);
+  };
+
+  const switchCalendar = (index) => {
+    setActiveCalendarIndex(index);
+  };
+
+  const deleteCalendar = (index) => {
+    if (savedCalendars.length === 1) {
+      toast.error('آخری کیلنڈر حذف نہیں کر سکتے / Cannot delete last calendar');
+      return;
+    }
+    
+    const calendarToDelete = savedCalendars[index];
+    const updatedCalendars = savedCalendars.filter((_, i) => i !== index);
+    setSavedCalendars(updatedCalendars);
+    localStorage.setItem('awaz-calendars', JSON.stringify(updatedCalendars));
+    
+    // Remove associated data
+    localStorage.removeItem(`activities-${calendarToDelete.id}`);
+    localStorage.removeItem(`notes-${calendarToDelete.id}`);
+    
+    // Switch to first calendar if current was deleted
+    if (activeCalendarIndex >= updatedCalendars.length) {
+      setActiveCalendarIndex(0);
+    }
+    
+    toast.success('کیلنڈر حذف ہو گیا / Calendar deleted');
   };
 
   const getActivitiesForDate = (date) => {
@@ -385,7 +579,11 @@ const CropCalendar = () => {
               </label>
               <select
                 value={formData.crop}
-                onChange={(e) => setFormData({ ...formData, crop: e.target.value })}
+                onChange={(e) => {
+                  const newCrop = e.target.value;
+                  const defaultVariety = CROP_VARIETIES[newCrop][0].name;
+                  setFormData({ ...formData, crop: newCrop, variety: defaultVariety });
+                }}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-farm-green-500 focus:outline-none text-right"
                 dir="rtl"
                 required
@@ -396,6 +594,28 @@ const CropCalendar = () => {
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="block text-right text-gray-700 font-bold mb-2" dir="rtl">
+                قسم کا انتخاب / Select Variety
+              </label>
+              <select
+                value={formData.variety}
+                onChange={(e) => setFormData({ ...formData, variety: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-farm-green-500 focus:outline-none text-right"
+                dir="rtl"
+                required
+              >
+                {CROP_VARIETIES[formData.crop].map((variety) => (
+                  <option key={variety.name} value={variety.name}>
+                    {variety.urdu} - {variety.yield} ({variety.duration} دن)
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-sm text-gray-600 text-right" dir="rtl">
+                {CROP_VARIETIES[formData.crop].find(v => v.name === formData.variety)?.yield} متوقع پیداوار
+              </p>
             </div>
 
             <button
@@ -412,6 +632,77 @@ const CropCalendar = () => {
 
   return (
     <div className="max-w-7xl mx-auto p-4">
+      {/* Calendar Tabs */}
+      {savedCalendars.length > 0 && (
+        <div className="mb-6 bg-white rounded-xl shadow-lg p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold text-farm-green-800" dir="rtl">
+              اپنے کیلنڈرز / Your Calendars
+            </h3>
+            <button
+              onClick={() => setShowForm(true)}
+              className="px-4 py-2 bg-gradient-to-r from-farm-green-500 to-farm-green-600 text-white font-bold rounded-lg hover:from-farm-green-600 hover:to-farm-green-700 transition-all shadow-md flex items-center gap-2"
+            >
+              <span>+</span>
+              <span>نیا کیلنڈر / New Calendar</span>
+            </button>
+          </div>
+          
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {savedCalendars.map((calendar, index) => (
+              <motion.div
+                key={calendar.id}
+                whileHover={{ scale: 1.02 }}
+                className={`relative min-w-[250px] p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                  activeCalendarIndex === index
+                    ? 'bg-gradient-to-r from-farm-green-100 to-farm-green-50 border-farm-green-500 shadow-lg'
+                    : 'bg-white border-gray-200 hover:border-farm-green-300'
+                }`}
+                onClick={() => switchCalendar(index)}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-2xl">{CROP_CALENDARS[calendar.crop].emoji}</span>
+                      <h4 className="font-bold text-gray-800">{calendar.farmerName}</h4>
+                    </div>
+                    <p className="text-sm text-gray-600">{CROP_CALENDARS[calendar.crop].name.split('/')[1]}</p>
+                    {calendar.variety && (
+                      <p className="text-xs text-farm-green-600 font-semibold mt-1">
+                        {CROP_VARIETIES[calendar.crop].find(v => v.name === calendar.variety)?.urdu || calendar.variety}
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                      <FaMapMarkerAlt />
+                      {calendar.location}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {calendar.acres} acres
+                    </p>
+                  </div>
+                  {savedCalendars.length > 1 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm('کیا آپ واقعی یہ کیلنڈر حذف کرنا چاہتے ہیں؟ / Delete this calendar?')) {
+                          deleteCalendar(index);
+                        }
+                      }}
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+                {activeCalendarIndex === index && (
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-farm-green-500 to-farm-green-600 rounded-b-xl"></div>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Farmer Details Card */}
       {farmerData && (
         <motion.div
@@ -439,13 +730,24 @@ const CropCalendar = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
               <div className="flex items-center gap-2 mb-2">
                 <FaSeedling />
                 <p className="text-sm opacity-80">Crop / فصل</p>
               </div>
               <p className="text-xl font-bold">{cropData.name.split('/')[0]}</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <FaLeaf />
+                <p className="text-sm opacity-80">Variety / قسم</p>
+              </div>
+              <p className="text-lg font-bold">
+                {farmerData.variety ? 
+                  CROP_VARIETIES[farmerData.crop].find(v => v.name === farmerData.variety)?.urdu || farmerData.variety
+                  : cropData.variety}
+              </p>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -459,14 +761,22 @@ const CropCalendar = () => {
                 <FaCalendarCheck />
                 <p className="text-sm opacity-80">Duration / مدت</p>
               </div>
-              <p className="text-xl font-bold">{cropData.duration} days</p>
+              <p className="text-xl font-bold">
+                {farmerData.variety ? 
+                  CROP_VARIETIES[farmerData.crop].find(v => v.name === farmerData.variety)?.duration || cropData.duration
+                  : cropData.duration} days
+              </p>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
               <div className="flex items-center gap-2 mb-2">
                 <FaChartLine />
                 <p className="text-sm opacity-80">Expected Yield</p>
               </div>
-              <p className="text-xl font-bold">{cropData.expectedYield}</p>
+              <p className="text-lg font-bold">
+                {farmerData.variety ? 
+                  CROP_VARIETIES[farmerData.crop].find(v => v.name === farmerData.variety)?.yield || cropData.expectedYield
+                  : cropData.expectedYield}
+              </p>
             </div>
           </div>
 
@@ -513,49 +823,89 @@ const CropCalendar = () => {
       </div>
 
       {/* Weather Widget */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-gradient-to-br from-blue-400 to-blue-600 text-white rounded-xl p-4 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <FaSun className="text-2xl" />
-                <span className="text-sm opacity-90">Today's Weather</span>
-              </div>
-              <p className="text-3xl font-bold">28°C</p>
-              <p className="text-sm opacity-90">Sunny & Clear</p>
-            </div>
-            <FaSun className="text-6xl opacity-30" />
-          </div>
+      {weatherLoading ? (
+        <div className="bg-white rounded-xl p-8 mb-6 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-farm-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">موسم کی معلومات لوڈ ہو رہی ہیں... / Loading weather data...</p>
         </div>
+      ) : weather ? (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          {/* Current Weather */}
+          <div className="bg-gradient-to-br from-blue-400 to-blue-600 text-white rounded-xl p-4 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  {weather.weatherCode <= 1 ? <FaSun className="text-2xl" /> : 
+                   weather.weatherCode <= 3 ? <FaCloud className="text-2xl" /> : 
+                   <FaCloudRain className="text-2xl" />}
+                  <span className="text-sm opacity-90">موسم / Weather</span>
+                </div>
+                <p className="text-3xl font-bold">{weather.temperature}°C</p>
+                <p className="text-sm opacity-90">{getWeatherDescription(weather.weatherCode).ur}</p>
+                {weather.locationName && (
+                  <p className="text-xs opacity-75 mt-1">📍 {weather.locationName}</p>
+                )}
+              </div>
+              {weather.weatherCode <= 1 ? <FaSun className="text-6xl opacity-30" /> : 
+               weather.weatherCode <= 3 ? <FaCloud className="text-6xl opacity-30" /> : 
+               <FaCloudRain className="text-6xl opacity-30" />}
+            </div>
+          </div>
 
-        <div className="bg-gradient-to-br from-cyan-400 to-cyan-600 text-white rounded-xl p-4 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <FaCloudRain className="text-2xl" />
-                <span className="text-sm opacity-90">Rainfall</span>
+          {/* Rainfall */}
+          <div className="bg-gradient-to-br from-cyan-400 to-cyan-600 text-white rounded-xl p-4 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <FaCloudRain className="text-2xl" />
+                  <span className="text-sm opacity-90">بارش / Rain</span>
+                </div>
+                <p className="text-3xl font-bold">{weather.rainChance}%</p>
+                <p className="text-sm opacity-90">Chance today</p>
+                {weather.precipitation > 0 && (
+                  <p className="text-xs opacity-90 mt-1">Current: {weather.precipitation}mm</p>
+                )}
               </div>
-              <p className="text-3xl font-bold">5%</p>
-              <p className="text-sm opacity-90">Chance of rain</p>
+              <FaCloudRain className="text-6xl opacity-30" />
             </div>
-            <FaCloudRain className="text-6xl opacity-30" />
           </div>
-        </div>
 
-        <div className="bg-gradient-to-br from-orange-400 to-orange-600 text-white rounded-xl p-4 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <FaThermometerHalf className="text-2xl" />
-                <span className="text-sm opacity-90">Temperature</span>
+          {/* Temperature Range */}
+          <div className="bg-gradient-to-br from-orange-400 to-orange-600 text-white rounded-xl p-4 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <FaThermometerHalf className="text-2xl" />
+                  <span className="text-sm opacity-90">درجہ حرارت / Temp</span>
+                </div>
+                <p className="text-3xl font-bold">↑ {weather.maxTemp}°C</p>
+                <p className="text-sm opacity-90">↓ Min {weather.minTemp}°C</p>
               </div>
-              <p className="text-3xl font-bold">Max 32°C</p>
-              <p className="text-sm opacity-90">Min 20°C</p>
+              <FaThermometerHalf className="text-6xl opacity-30" />
             </div>
-            <FaThermometerHalf className="text-6xl opacity-30" />
+          </div>
+
+          {/* Wind & Humidity */}
+          <div className="bg-gradient-to-br from-green-400 to-green-600 text-white rounded-xl p-4 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <FaWind className="text-2xl" />
+                  <span className="text-sm opacity-90">ہوا / Wind</span>
+                </div>
+                <p className="text-3xl font-bold">{weather.windSpeed} km/h</p>
+                <p className="text-sm opacity-90">💧 Humidity {weather.humidity}%</p>
+              </div>
+              <FaWind className="text-6xl opacity-30" />
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="bg-white rounded-xl p-6 mb-6 text-center text-gray-600">
+          <FaCloud className="text-4xl mx-auto mb-2 text-gray-400" />
+          <p>موسم کی معلومات دستیاب نہیں / Weather data not available</p>
+        </div>
+      )}
 
       {/* Month Navigation */}
       <div className="bg-white rounded-xl shadow-lg p-4 mb-6 flex items-center justify-between">
