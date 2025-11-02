@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { mlService } from '../services/mlService';
 import './FertilizerOptimizer.css';
-import axios from 'axios';
 
 const FertilizerOptimizer = ({ onClose = null }) => {
     const [step, setStep] = useState('input');
@@ -80,28 +79,7 @@ const FertilizerOptimizer = ({ onClose = null }) => {
     useEffect(() => {
         loadSupportedOptions();
     }, []);
-    const [audioUnlocked, setAudioUnlocked] = useState(false);
 
-    // Unlock audio on first user click
-    useEffect(() => {
-        const unlockAudio = () => {
-            const audio = new Audio();
-            audio.play().catch(() => { });
-            document.removeEventListener('click', unlockAudio);
-            document.removeEventListener('touchstart', unlockAudio);
-            setAudioUnlocked(true);
-        };
-
-        if (!audioUnlocked) {
-            document.addEventListener('click', unlockAudio);
-            document.addEventListener('touchstart', unlockAudio);
-        }
-
-        return () => {
-            document.removeEventListener('click', unlockAudio);
-            document.removeEventListener('touchstart', unlockAudio);
-        };
-    }, [audioUnlocked]);
     const loadSupportedOptions = async () => {
         const crops = await mlService.getSupportedCrops();
         const soils = await mlService.getSupportedSoils();
@@ -203,49 +181,105 @@ const FertilizerOptimizer = ({ onClose = null }) => {
         setPrediction(null);
         setError(null);
     };
-    // Add your API key (use env var in production: process.env.REACT_APP_SPEECHMATICS_KEY)
-    const SPEECHMATICS_KEY = 'your-api-key-here';  // Replace with your key
-    const DATACENTER = 'us-east';  // Your datacenter
 
-    const handleSpeak = async () => {
-        if (!audioUnlocked) {
-            alert('Please tap anywhere to enable sound.');
+    const handleSpeak = () => {
+        if (!('speechSynthesis' in window)) {
+            alert(language === 'en' 
+                ? 'Text-to-speech is not supported in your browser.' 
+                : 'آپ کا براؤزر آواز کو سپورٹ نہیں کرتا');
             return;
         }
 
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel();
+
         const fertilizer = getTranslatedFertilizerName(prediction.recommended_fertilizer);
         const text = language === 'en'
-            ? `${prediction.recommended_fertilizer}, ${prediction.quantity} kg, ${prediction.landSize} acres, ${prediction.estimatedCost} rupees`
-            : `${fertilizer}، ${prediction.quantity} کلو، ${prediction.landSize} ایکڑ، ${prediction.estimatedCost} روپے`;
+            ? `Recommended fertilizer is ${prediction.recommended_fertilizer}. You will need ${prediction.quantity} kilograms for ${prediction.landSize} acres. The estimated cost is ${prediction.estimatedCost} rupees.`
+            : `تجویز کردہ کھاد ${fertilizer} ہے۔ ${prediction.landSize} ایکڑ کے لیے ${prediction.quantity} کلو کی ضرورت ہوگی۔ تخمینہ قیمت ${prediction.estimatedCost} روپے ہے۔`;
 
-        try {
-            // Speechmatics TTS API call
-            const response = await axios.post(
-                `https://${DATACENTER}.tts.speechmatics.com/v2.0/tts`,
-                {
-                    text: text,
-                    language: language === 'en' ? 'en-US' : 'ur-PK',
-                    voice: language === 'en' ? 'en-US-John' : 'ur-PK-Ayesha',  // Urdu voice: Ayesha (female, natural)
-                    format: 'mp3',  // Or 'wav'
-                    sample_rate: 22050
-                },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${SPEECHMATICS_KEY}`,
-                        'Content-Type': 'application/json'
-                    },
-                    responseType: 'blob'  // For audio blob
-                }
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        // Get available voices
+        const voices = window.speechSynthesis.getVoices();
+        
+        if (language === 'ur') {
+            // Try to find Urdu or Hindi voice for Urdu text
+            let selectedVoice = voices.find(v => 
+                v.lang === 'ur-PK' || 
+                v.lang === 'ur-IN' || 
+                v.lang.startsWith('ur')
             );
+            
+            // Fallback to Hindi
+            if (!selectedVoice) {
+                selectedVoice = voices.find(v => 
+                    v.lang === 'hi-IN' || 
+                    v.lang.startsWith('hi')
+                );
+            }
 
-            // Create audio from blob
-            const audioBlob = new Blob([response.data], { type: 'audio/mp3' });
-            const audioUrl = URL.createObjectURL(audioBlob);
-            const audio = new Audio(audioUrl);
-            audio.play().catch(() => alert('Audio play failed. Check console.'));
-        } catch (err) {
-            console.error('Speechmatics error:', err);
-            alert('TTS failed. Check API key or internet.');
+            // Fallback to any Asian language
+            if (!selectedVoice) {
+                selectedVoice = voices.find(v => 
+                    v.lang.startsWith('ar') || // Arabic (similar script)
+                    v.lang.startsWith('fa') || // Persian
+                    v.lang.startsWith('pa')    // Punjabi
+                );
+            }
+            
+            if (selectedVoice) {
+                utterance.voice = selectedVoice;
+            }
+            
+            utterance.lang = 'ur-PK';
+            utterance.rate = 0.85;
+        } else {
+            // English voice
+            const englishVoice = voices.find(v => 
+                v.lang === 'en-US' || 
+                v.lang === 'en-GB' || 
+                v.lang.startsWith('en')
+            );
+            
+            if (englishVoice) {
+                utterance.voice = englishVoice;
+            }
+            
+            utterance.lang = 'en-US';
+            utterance.rate = 0.9;
+        }
+
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+        
+        utterance.onstart = () => {
+            console.log('🔊 Speaking...');
+        };
+        
+        utterance.onend = () => {
+            console.log('✅ Speech ended');
+        };
+
+        utterance.onerror = (event) => {
+            console.error('Speech error:', event);
+            alert(language === 'en' 
+                ? 'Failed to speak. Please try again.' 
+                : 'آواز چلانے میں ناکامی۔ دوبارہ کوشش کریں۔');
+        };
+        
+        // Wait for voices to load if needed
+        const speakNow = () => {
+            window.speechSynthesis.speak(utterance);
+        };
+
+        const currentVoices = window.speechSynthesis.getVoices();
+        if (currentVoices.length === 0) {
+            window.speechSynthesis.onvoiceschanged = () => {
+                speakNow();
+            };
+        } else {
+            speakNow();
         }
     };
 
@@ -539,26 +573,26 @@ const FertilizerOptimizer = ({ onClose = null }) => {
                         </div>
                         <button
                             onClick={handleSpeak}
-                            disabled={!audioUnlocked}
+                            className="speak-button"
                             style={{
                                 margin: '16px 0',
                                 padding: '12px 24px',
-                                background: audioUnlocked ? '#10b981' : '#94a3b8',
+                                background: '#10b981',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '12px',
                                 fontSize: '16px',
                                 fontWeight: '600',
-                                cursor: audioUnlocked ? 'pointer' : 'not-allowed',
+                                cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '8px'
+                                gap: '8px',
+                                transition: 'all 0.3s ease',
                             }}
+                            onMouseOver={(e) => e.currentTarget.style.background = '#059669'}
+                            onMouseOut={(e) => e.currentTarget.style.background = '#10b981'}
                         >
-                            🔊 {audioUnlocked
-                                ? (language === 'en' ? 'Speak Recommendation' : 'تجویز سنائیں')
-                                : (language === 'en' ? 'Tap to Unlock' : 'ٹچ کریں')
-                            }
+                            🔊 {language === 'en' ? 'Speak Recommendation' : 'تجویز سنائیں'}
                         </button>
                     </div>
                 </div>

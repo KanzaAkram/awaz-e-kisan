@@ -16,9 +16,12 @@ const VoiceRecorder = () => {
   const [isPlayingResponse, setIsPlayingResponse] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState(userData?.language || 'urdu');
   const [conversationHistory, setConversationHistory] = useState([]);
+  const [useSpeechmatics, setUseSpeechmatics] = useState(true); // Toggle for Speechmatics
 
-  // Use browser's Web Speech API for speech recognition
+  // Use browser's Web Speech API for speech recognition (fallback)
   const recognitionRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
   useEffect(() => {
     // Initialize Web Speech API
@@ -86,8 +89,163 @@ const VoiceRecorder = () => {
     };
   }, [selectedLanguage]);
 
-  // Start recording with Web Speech API
+  // Transcribe audio using Speechmatics API
+  const transcribeWithSpeechmatics = async (audioBlob) => {
+    try {
+      const apiKey = import.meta.env.VITE_SPEECHMATICS_API_KEY;
+      
+      if (!apiKey || apiKey === 'your_speechmatics_api_key_here') {
+        console.warn('Speechmatics API key not configured, falling back to Web Speech API');
+        return null;
+      }
+
+      toast.loading('🎧 پروسیسنگ... / Processing audio...');
+
+      // Language code mapping for Speechmatics
+      const langMap = {
+        'urdu': 'ur',
+        'punjabi': 'pa',
+        'sindhi': 'sd',
+        'english': 'en'
+      };
+      const langCode = langMap[selectedLanguage] || 'ur';
+
+      // Create FormData for Speechmatics batch API
+      const formData = new FormData();
+      formData.append('data_file', audioBlob, 'audio.webm');
+      
+      const config = {
+        type: 'transcription',
+        transcription_config: {
+          language: langCode,
+          operating_point: 'enhanced',
+          enable_partials: false,
+          max_delay: 5,
+        }
+      };
+      formData.append('config', JSON.stringify(config));
+
+      const response = await fetch('https://asr.api.speechmatics.com/v2/jobs', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Speechmatics API error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const jobId = result.id;
+      
+      // Poll for job completion
+      let transcript = '';
+      let attempts = 0;
+      const maxAttempts = 30; // 30 seconds timeout
+      
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+        
+        const statusResponse = await fetch(`https://asr.api.speechmatics.com/v2/jobs/${jobId}/transcript`, {
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+          },
+        });
+
+        if (statusResponse.ok) {
+          const transcriptData = await statusResponse.json();
+          if (transcriptData.results && transcriptData.results.length > 0) {
+            transcript = transcriptData.results.map(r => r.alternatives[0].content).join(' ');
+            break;
+          }
+        }
+        
+        attempts++;
+      }
+
+      toast.dismiss();
+      
+      if (!transcript) {
+        throw new Error('Transcription timeout');
+      }
+
+      return transcript;
+    } catch (error) {
+      console.error('Speechmatics error:', error);
+      toast.dismiss();
+      return null; // Will fallback to Web Speech API
+    }
+  };
+
+  // Start recording with Speechmatics or Web Speech API
   const startRecording = () => {
+    if (useSpeechmatics && import.meta.env.VITE_SPEECHMATICS_API_KEY && 
+        import.meta.env.VITE_SPEECHMATICS_API_KEY !== 'your_speechmatics_api_key_here') {
+      // Use Speechmatics with MediaRecorder
+      startSpeechmaticsRecording();
+    } else {
+      // Fallback to Web Speech API
+      startWebSpeechRecording();
+    }
+  };
+
+  // Start recording with Speechmatics
+  const startSpeechmaticsRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorderRef.current.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        
+        // Stop all audio tracks
+        stream.getTracks().forEach(track => track.stop());
+        
+        // Transcribe with Speechmatics
+        const transcript = await transcribeWithSpeechmatics(audioBlob);
+        
+        if (transcript) {
+          console.log('🎤 Speechmatics transcribed:', transcript);
+          setTranscription(transcript);
+          toast.success('✅ سمجھ آ گیا! / Understood!');
+          await processQuestion(transcript);
+        } else {
+          toast.error('❌ ٹرانسکرپشن ناکام / Transcription failed. Try again or type your question.');
+        }
+      };
+
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+      setTranscription('');
+      setResponse('');
+      toast.loading('🎤 بولیں... / Speak now...');
+      
+    } catch (error) {
+      console.error('MediaRecorder error:', error);
+      
+      if (error.name === 'NotAllowedError') {
+        toast.error('مائیکروفون کی اجازت دیں۔ براؤزر سیٹنگز چیک کریں', {
+          duration: 5000
+        });
+      } else {
+        toast.error('مائیکروفون شروع نہیں ہو سکا۔ نیچے لکھ کر پوچھیں', {
+          duration: 4000
+        });
+      }
+    }
+  };
+
+  // Start recording with Web Speech API (fallback)
+  const startWebSpeechRecording = () => {
     if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
       toast.error('آپ کا براؤزر آواز کی پہچان کو سپورٹ نہیں کرتا۔ Chrome یا Edge استعمال کریں', {
         duration: 5000
@@ -121,7 +279,13 @@ const VoiceRecorder = () => {
 
   // Stop recording
   const stopRecording = () => {
-    if (recognitionRef.current && isRecording) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      // Stop Speechmatics recording
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      toast.dismiss();
+    } else if (recognitionRef.current && isRecording) {
+      // Stop Web Speech API recording
       recognitionRef.current.stop();
       setIsRecording(false);
       toast.dismiss();
@@ -309,8 +473,8 @@ const VoiceRecorder = () => {
   return (
     <div className="max-w-4xl mx-auto p-6">
       {/* Header with Language Selector and Clear Button */}
-      <div className="mb-6 flex justify-between items-center gap-4">
-        <div className="flex gap-4">
+      <div className="mb-6 flex justify-between items-center gap-4 flex-wrap">
+        <div className="flex gap-4 flex-wrap">
           {['urdu', 'punjabi', 'sindhi'].map((lang) => (
             <button
               key={lang}
@@ -326,6 +490,21 @@ const VoiceRecorder = () => {
               {lang === 'sindhi' && 'سنڌي'}
             </button>
           ))}
+        </div>
+        
+        {/* STT Method Toggle */}
+        <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-md">
+          <span className="text-sm text-gray-600">STT:</span>
+          <button
+            onClick={() => setUseSpeechmatics(!useSpeechmatics)}
+            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+              useSpeechmatics
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-200 text-gray-600'
+            }`}
+          >
+            {useSpeechmatics ? '🎯 Speechmatics' : '🌐 Web Speech'}
+          </button>
         </div>
         
         {/* New Conversation Button */}
