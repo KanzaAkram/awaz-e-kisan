@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AuthForm from './components/AuthForm';
 import Dashboard from './pages/Dashboard';
 import LandingPage from './pages/LandingPage';
+import WeatherPage from './pages/WeatherPage';
 import './index.css';
 
 const PrivateRoute = ({ children }) => {
@@ -22,6 +23,7 @@ function AppRoutes() {
     <Router>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/weather" element={<WeatherPage />} />
         <Route
           path="/login"
           element={
