@@ -2,13 +2,12 @@
 
 ## Table of Contents
 1. [Project Overview](#project-overview)
-2. [🌟 NEW: Smart Farming Timeline](#-new-smart-farming-timeline)
-3. [Architecture](#architecture)
-4. [Firestore Schema](#firestore-schema)
-5. [API Endpoints](#api-endpoints)
-6. [Frontend Components](#frontend-components)
-7. [Integration Flow](#integration-flow)
-8. [Security](#security)
+2. [Architecture](#architecture)
+3. [Firestore Schema](#firestore-schema)
+4. [API Endpoints](#api-endpoints)
+5. [Frontend Components](#frontend-components)
+6. [Integration Flow](#integration-flow)
+7. [Security](#security)
 
 ---
 
@@ -20,73 +19,6 @@
 - 🤖 AI-powered farming advice using GPT-4
 - 📱 Mobile-responsive web interface
 - 🔐 Secure Firebase authentication
-- 🌾 **NEW:** Smart Farming Timeline with personalized crop calendars
-
----
-
-## 🌟 NEW: Smart Farming Timeline
-
-### The Innovation That Wins! 🏆
-
-A revolutionary feature that generates a **complete 40+ activity crop calendar** from just a **30-second voice conversation** in Urdu, then sends proactive reminders at exactly the right time for every farming activity.
-
-#### Key Innovations:
-
-1. **📅 Personalized Calendar Generation**
-   - Answer 4 simple questions in Urdu
-   - AI instantly generates complete farming plan
-   - 40+ time-sensitive activities with exact dates
-   - Customized for wheat, rice, cotton, and sugarcane
-
-2. **🔔 Proactive Voice Reminders**
-   - Get reminded 3 days before each activity
-   - Voice messages in Urdu explaining what to do
-   - Includes market prices and quantities needed
-   - Daily reminders at 8 AM Pakistan time
-
-3. **⛈️ Weather-Adaptive Rescheduling**
-   - Automatically postpones activities if rain predicted
-   - Moves up irrigation during heatwaves
-   - Delays planting during cold snaps
-   - Sends explanation of why schedule changed
-
-4. **💰 Cost Optimization Intelligence**
-   - Tracks real-time fertilizer and pesticide prices
-   - Alerts when prices drop
-   - Suggests group buying with nearby farmers
-   - Shows total expected costs upfront
-
-5. **🎮 Yield Prediction & Gamification**
-   - See estimated yield: "25 maund/acre if you follow plan"
-   - Progress bar showing season completion
-   - Real-time yield updates as you complete tasks
-   - Achievement badges for timely completions
-
-6. **👥 Community Sync (THE GAME CHANGER!)**
-   - See anonymous peer activity: "47 farmers sprayed today"
-   - Early disease alerts from nearby farms
-   - Success stories from neighboring farmers
-   - Group buying opportunities with local farmers
-
-#### Quick Start:
-
-```bash
-# See full documentation
-cat SMART_FARMING_TIMELINE.md
-
-# Setup guide
-cat SMART_TIMELINE_SETUP.md
-
-# Deploy new features
-firebase deploy --only firestore:rules,functions
-```
-
-#### Impact on SDGs:
-- ✅ **SDG 2:** Zero Hunger - Increases yields by 20-30%
-- ✅ **SDG 8:** Economic Growth - Improves farmer income by 25%
-- ✅ **SDG 12:** Responsible Production - Reduces input waste
-- ✅ **SDG 13:** Climate Action - Weather-adaptive farming
-- ✅ **SDG 17:** Partnerships - Creates farmer communities
 
 ---
 
