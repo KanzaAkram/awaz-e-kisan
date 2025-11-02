@@ -36,7 +36,7 @@ export async function speechToText(audioBlob, language = 'ur') {
   
   // Option 1: Try Hugging Face Whisper (requires API key)
   const HF_TOKEN = import.meta.env.VITE_HUGGINGFACE_API_KEY;
-  if (HF_TOKEN && HF_TOKEN !== 'YOUR_HF_TOKEN_HERE') {
+  if (HF_TOKEN && HF_TOKEN !== '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') {
     try {
       console.log('🔄 Trying Hugging Face Whisper...');
       
@@ -242,25 +242,72 @@ export async function askAssistant(question, language = 'urdu') {
   try {
     console.log('💬 Asking AI assistant...');
 
-    const systemPrompt = `You are **Awaz-e-Kisan (آوازِ کسان)**, a friendly multilingual farming assistant for Pakistani farmers.
+    const systemPrompt = `آپ **آوازِ کسان (Awaz-e-Kisan)** ہیں، پاکستانی کسانوں کے لیے ایک دوستانہ کثیر لسانی کاشتکاری مددگار۔
 
-Language Detection & Response:
-- Automatically detect if the farmer is speaking in Urdu (اردو), Punjabi (ਪੰਜਾਬੀ), or Sindhi (سنڌي)
-- Respond in the SAME language the farmer used
-- Use simple, clear, and practical language
+جواب کی زبان:
+- کسان جس زبان میں سوال پوچھے، اسی میں جواب دیں (اردو، پنجابی، سندھی)
+- سادہ، واضح اور عملی زبان استعمال کریں
+- 2-3 جملوں میں مختصر جواب دیں
 
-Topics You Help With:
-- 🌦️ Weather forecasts and farming calendars
-- 🌱 Crop selection, planting times, and growing tips
-- 💧 Irrigation and water management
-- 🌿 Fertilizers and pest control (organic preferred)
-- 💰 Market prices and selling strategies
+موضوعات:
+- موسم کی پیشن گوئی اور فصل کیلنڈر
+- فصلوں کا انتخاب اور کاشت کا وقت
+- پانی کا استعمال اور آبپاشی
+- کھاد اور کیڑوں سے بچاؤ
+- مارکیٹ کی قیمتیں
 
-Tone & Style:
-- Friendly, respectful, and supportive
-- Keep responses SHORT (2-4 sentences max)
-- Give actionable advice`;
+انداز:
+- دوستانہ اور مددگار
+- قابل عمل مشورہ
+- مختصر اور واضح`;
 
+    // Option 1: Try Gemini API first (we have working key!)
+    if (GEMINI_API_KEY && GEMINI_API_KEY !== 'YOUR_GEMINI_API_KEY_HERE') {
+      try {
+        console.log('🤖 Trying Gemini API...');
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-001:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    {
+                      text: `${systemPrompt}\n\nسوال: ${question}\n\nجواب (اسی زبان میں):`,
+                    },
+                  ],
+                },
+              ],
+              generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 300,
+              },
+            }),
+          }
+        );
+
+        if (response.ok) {
+          const result = await response.json();
+          const answer = result.candidates[0].content.parts[0].text;
+
+          console.log('✅ Gemini response:', answer.substring(0, 50));
+
+          return {
+            success: true,
+            answer,
+            language: detectLanguage(answer),
+          };
+        }
+      } catch (geminiError) {
+        console.warn('⚠️ Gemini failed, trying OpenRouter...');
+      }
+    }
+
+    // Option 2: Try OpenRouter as fallback
     const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -270,7 +317,7 @@ Tone & Style:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'openai/gpt-4-turbo',
+        model: 'google/gemini-2.0-flash-exp:free',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: question },
@@ -288,7 +335,7 @@ Tone & Style:
     const result = await response.json();
     const answer = result.choices[0].message.content;
 
-    console.log('✅ Assistant response:', answer.substring(0, 50));
+    console.log('✅ OpenRouter response:', answer.substring(0, 50));
 
     return {
       success: true,
@@ -297,7 +344,18 @@ Tone & Style:
     };
   } catch (error) {
     console.error('❌ Assistant error:', error);
-    throw new Error(`Failed to get answer: ${error.message}`);
+    
+    // Option 3: Return helpful fallback message
+    const fallbackAnswers = {
+      urdu: `معذرت، AI سروس فی الوقت دستیاب نہیں۔ براہ کرم:\n\n1. اپنا سوال مختصر کریں\n2. انٹرنیٹ کنکشن چیک کریں\n3. دوبارہ کوشش کریں\n\nمزید مدد کے لیے قریبی ایگریکلچر آفیس سے رابطہ کریں۔`,
+      english: `Sorry, AI service is temporarily unavailable. Please:\n\n1. Keep your question short\n2. Check internet connection\n3. Try again\n\nFor more help, contact local Agriculture office.`
+    };
+    
+    return {
+      success: true,
+      answer: fallbackAnswers[language] || fallbackAnswers.urdu,
+      language: language,
+    };
   }
 }
 
@@ -483,7 +541,7 @@ export async function generateTrainingContent(topicId, topicQuery) {
     if (GEMINI_API_KEY && GEMINI_API_KEY !== 'YOUR_GEMINI_API_KEY_HERE') {
       try {
         const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+          `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-001:generateContent?key=${GEMINI_API_KEY}`,
           {
             method: 'POST',
             headers: {
@@ -513,7 +571,7 @@ export async function generateTrainingContent(topicId, topicQuery) {
 
           // Generate English version
           const englishResponse = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+            `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-001:generateContent?key=${GEMINI_API_KEY}`,
             {
               method: 'POST',
               headers: {
@@ -691,4 +749,117 @@ function getFallbackContent(topicId) {
   };
 
   return fallbacks[topicId] || fallbacks['custom'];
+}
+
+// ========================================
+// Crop Disease Detection (Gemini Vision API)
+// ========================================
+
+/**
+ * Analyze crop disease from image using Gemini Vision API
+ * @param {string} base64Image - Base64 encoded image
+ * @returns {Promise<object>} - Disease analysis with Urdu explanation
+ */
+export async function analyzeCropDisease(base64Image) {
+  try {
+    console.log('🔍 Analyzing crop disease with Gemini Vision...');
+
+    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
+      throw new Error('Gemini API key not configured');
+    }
+
+    const prompt = `You are an expert Pakistani agricultural pathologist specializing in crop diseases.
+
+Analyze this crop image and provide:
+1. Disease name in Urdu and English
+2. Severity level (High/درمیانہ/کم)
+3. Detailed explanation in URDU (400-500 words)
+4. Treatment recommendations in URDU
+5. Prevention tips in URDU
+
+IMPORTANT: 
+- Write ALL explanations in URDU (اردو میں لکھیں)
+- Use simple language that farmers can understand
+- Provide practical, actionable advice
+- Include both organic and chemical treatment options
+- Mention Pakistani products if available
+
+Return ONLY valid JSON (no markdown) in this format:
+{
+  "diseaseNameUrdu": "بیماری کا نام اردو میں",
+  "diseaseNameEnglish": "Disease Name in English",
+  "severity": "High/Medium/Low",
+  "urduExplanation": "تفصیلی وضاحت اردو میں (400-500 الفاظ)...",
+  "treatment": "علاج کی تجاویز اردو میں...",
+  "prevention": "احتیاطی تدابیر اردو میں..."
+}`;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-001:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: prompt,
+                },
+                {
+                  inline_data: {
+                    mime_type: 'image/jpeg',
+                    data: base64Image,
+                  },
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.4,
+            maxOutputTokens: 2000,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('❌ Gemini API Error:', errorData);
+      throw new Error(errorData.error?.message || 'Gemini API failed');
+    }
+
+    const result = await response.json();
+    const content = result.candidates[0].content.parts[0].text;
+
+    console.log('📝 Gemini Response:', content.substring(0, 100));
+
+    // Parse JSON response
+    const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const analysis = JSON.parse(cleaned);
+
+    console.log('✅ Disease analysis complete');
+
+    return {
+      success: true,
+      ...analysis,
+    };
+
+  } catch (error) {
+    console.error('❌ Disease analysis error:', error);
+    
+    // Return fallback response
+    return {
+      success: false,
+      error: error.message,
+      diseaseNameUrdu: 'تشخیص دستیاب نہیں',
+      diseaseNameEnglish: 'Analysis unavailable',
+      severity: 'Unknown',
+      urduExplanation: `معذرت، تصویر کا تجزیہ نہیں ہو سکا۔ براہ کرم:\n\n1. واضح تصویر لیں\n2. روشنی اچھی ہو\n3. متاثرہ حصہ واضح نظر آئے\n4. دوبارہ کوشش کریں\n\nیا قریبی ایگریکلچر آفیس سے رابطہ کریں۔`,
+      treatment: 'براہ کرم دوبارہ کوشش کریں یا ماہر سے مشورہ کریں۔',
+      prevention: 'صاف اور واضح تصویر اپ لوڈ کریں۔',
+    };
+  }
 }
