@@ -5,7 +5,8 @@ import QueryHistory from '../components/QueryHistory';
 import CropCalendar from '../components/CropCalendar';
 import VoiceOnboarding from '../components/VoiceOnboarding';
 import FarmerTraining from '../components/FarmerTraining';
-import { FaSignOutAlt, FaUser, FaHistory, FaMicrophone, FaCalendarAlt, FaSeedling, FaBookReader } from 'react-icons/fa';
+import FarmerChatbot from '../components/FarmerChatbot'; 
+import { FaSignOutAlt, FaUser, FaHistory, FaMicrophone, FaCalendarAlt, FaSeedling, FaBookReader, FaComments } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -25,7 +26,7 @@ const Dashboard = () => {
     try {
       const calendarDoc = await getDoc(doc(db, 'cropCalendars', currentUser.uid));
       setHasCalendar(calendarDoc.exists());
-      
+
       // Don't auto-show onboarding - let user choose when to create calendar
       // if (!calendarDoc.exists()) {
       //   setShowOnboarding(true);
@@ -86,47 +87,53 @@ const Dashboard = () => {
           <div className="flex gap-1 overflow-x-auto">
             <button
               onClick={() => setActiveTab('training')}
-              className={`flex items-center gap-2 px-6 py-4 font-semibold transition-all border-b-4 whitespace-nowrap ${
-                activeTab === 'training'
-                  ? 'border-blue-600 text-blue-700 bg-blue-50'
-                  : 'border-transparent text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-              }`}
+              className={`flex items-center gap-2 px-6 py-4 font-semibold transition-all border-b-4 whitespace-nowrap ${activeTab === 'training'
+                  ? 'border-farm-green-600 text-farm-green-700'
+                  : 'border-transparent text-gray-500 hover:text-farm-green-600'
+                }`}
             >
               <FaBookReader className="text-xl" />
               <span className="font-bold">🎓 تربیت و تعلیم</span>
             </button>
             <button
               onClick={() => setActiveTab('calendar')}
-              className={`flex items-center gap-2 px-6 py-4 font-semibold transition-all border-b-4 whitespace-nowrap ${
-                activeTab === 'calendar'
+              className={`flex items-center gap-2 px-6 py-4 font-semibold transition-all border-b-4 whitespace-nowrap ${activeTab === 'calendar'
                   ? 'border-farm-green-600 text-farm-green-700'
                   : 'border-transparent text-gray-500 hover:text-farm-green-600'
-              }`}
+                }`}
             >
               <FaCalendarAlt />
               فصل کیلنڈر
             </button>
             <button
               onClick={() => setActiveTab('voice')}
-              className={`flex items-center gap-2 px-6 py-4 font-semibold transition-all border-b-4 whitespace-nowrap ${
-                activeTab === 'voice'
+              className={`flex items-center gap-2 px-6 py-4 font-semibold transition-all border-b-4 whitespace-nowrap ${activeTab === 'voice'
                   ? 'border-farm-green-600 text-farm-green-700'
                   : 'border-transparent text-gray-500 hover:text-farm-green-600'
-              }`}
+                }`}
             >
               <FaMicrophone />
               سوال پوچھیں
             </button>
             <button
               onClick={() => setActiveTab('history')}
-              className={`flex items-center gap-2 px-6 py-4 font-semibold transition-all border-b-4 whitespace-nowrap ${
-                activeTab === 'history'
+              className={`flex items-center gap-2 px-6 py-4 font-semibold transition-all border-b-4 whitespace-nowrap ${activeTab === 'history'
                   ? 'border-farm-green-600 text-farm-green-700'
                   : 'border-transparent text-gray-500 hover:text-farm-green-600'
-              }`}
+                }`}
             >
               <FaHistory />
               تاریخ
+            </button>
+            <button
+              onClick={() => setActiveTab('chatbot')}
+              className={`flex items-center gap-2 px-6 py-4 font-semibold transition-all border-b-4 whitespace-nowrap ${activeTab === 'chatbot'
+                  ? 'border-farm-green-600 text-farm-green-700 bg-green-50'
+                  : 'border-transparent text-gray-500 hover:text-farm-green-600'
+                }`}
+            >
+              <FaComments className="text-xl" />
+              چیٹ بوٹ
             </button>
             {!hasCalendar && (
               <button
@@ -183,6 +190,7 @@ const Dashboard = () => {
           {activeTab === 'voice' && <VoiceRecorder />}
           {activeTab === 'training' && <FarmerTraining />}
           {activeTab === 'history' && <QueryHistory />}
+          {activeTab === 'chatbot' && <FarmerChatbot />}
         </motion.div>
       </main>
 
