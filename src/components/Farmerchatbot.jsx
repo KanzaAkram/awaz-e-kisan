@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Mic, MicOff, Volume2, Loader2 } from 'lucide-react';
+import { askAssistant } from '../services/aiService';
 
 const FarmerChatbot = () => {
   const [messages, setMessages] = useState([
@@ -16,11 +17,6 @@ const FarmerChatbot = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showQuickQuestions, setShowQuickQuestions] = useState(true);
   const messagesEndRef = useRef(null);
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
-  const audioRef = useRef(null);
-
-  const API_BASE_URL = 'http://127.0.0.1:8000';
 
   const quickQuestions = [
     '🌾 گندم کی کاشت کا بہترین وقت؟',
@@ -37,128 +33,115 @@ const FarmerChatbot = () => {
     scrollToBottom();
   }, [messages]);
 
-  // ✅ Urdu Speech-to-Text via your FastAPI backend
-  const transcribeAudioWithWhisper = async (audioBlob) => {
-    try {
-      const formData = new FormData();
-      formData.append("file", audioBlob, "audio.webm");
+  // Use Web Speech API for speech recognition
+  const recognitionRef = useRef(null);
 
-      const response = await fetch(`${API_BASE_URL}/api/stt`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error("Transcription failed");
-      const data = await response.json();
-      return data.text;
-    } catch (error) {
-      console.error("STT error:", error);
-      alert("آواز کو متن میں تبدیل نہیں کیا جا سکا۔");
-      return null;
+  useEffect(() => {
+    // Initialize Web Speech API
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = 'ur-PK'; // Urdu language
     }
-  };
+  }, []);
 
-  // Start recording audio
-  const startRecording = async () => {
+  // Start recording audio using Web Speech API
+  const startRecording = () => {
+    if (!recognitionRef.current) {
+      alert('معذرت! آپ کا براؤزر آواز کی پہچان کی سہولت فراہم نہیں کرتا۔');
+      return;
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
-      audioChunksRef.current = [];
-
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
+      recognitionRef.current.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setInput(transcript);
+        setIsRecording(false);
       };
 
-      mediaRecorderRef.current.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-
-        // Transcribe using Whisper
-        setIsLoading(true);
-        const transcription = await transcribeAudioWithWhisper(audioBlob);
-        setIsLoading(false);
-
-        if (transcription) {
-          setInput(transcription);
-        } else {
-          alert('معذرت! آواز کو سمجھنے میں مشکل ہوئی۔ براہ کرم دوبارہ کوشش کریں۔');
-        }
-
-        // Stop all tracks
-        stream.getTracks().forEach((track) => track.stop());
+      recognitionRef.current.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        alert('معذرت! آواز کو سمجھنے میں مشکل ہوئی۔ براہ کرم دوبارہ کوشش کریں۔');
+        setIsRecording(false);
       };
 
-      mediaRecorderRef.current.start();
+      recognitionRef.current.onend = () => {
+        setIsRecording(false);
+      };
+
+      recognitionRef.current.start();
       setIsRecording(true);
     } catch (error) {
       console.error('Recording error:', error);
       alert('معذرت! مائیکروفون تک رسائی نہیں ہو سکی۔ براہ کرم اجازت دیں۔');
+      setIsRecording(false);
     }
   };
 
   // Stop recording
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
+    if (recognitionRef.current && isRecording) {
+      recognitionRef.current.stop();
       setIsRecording(false);
     }
   };
 
-  const speakTextWithMMS = async (text) => {
-    setIsSpeaking(true);
-
-    try {
-      const formData = new FormData();
-      formData.append("text", text);
-
-      const response = await fetch(`${API_BASE_URL}/api/tts`, {
-        method: "POST",
-        body: formData
-      });
-
-      if (!response.ok) {
-        throw new Error("TTS generation failed");
-      }
-
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-
-      if (audioRef.current) {
-        audioRef.current.src = audioUrl;
-        audioRef.current.play();
-        audioRef.current.onended = () => {
-          setIsSpeaking(false);
-          URL.revokeObjectURL(audioUrl);
-        };
-      }
-    } catch (error) {
-      console.error("Local TTS error:", error);
-      setIsSpeaking(false);
-      alert("TTS API error — Urdu voice not generated.");
+  const speakTextWithMMS = (text) => {
+    if ('speechSynthesis' in window) {
+      setIsSpeaking(true);
+      
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel();
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'ur-PK'; // Urdu language
+      utterance.rate = 0.9; // Slightly slower for clarity
+      utterance.pitch = 1;
+      
+      utterance.onend = () => {
+        setIsSpeaking(false);
+      };
+      
+      utterance.onerror = (error) => {
+        console.error('Speech synthesis error:', error);
+        setIsSpeaking(false);
+      };
+      
+      window.speechSynthesis.speak(utterance);
+    } else {
+      alert('معذرت! آپ کا براؤزر آواز کی سہولت فراہم نہیں کرتا۔');
     }
   };
 
 
-  // Call Backend API
+  // Call Gemini API using existing service
   const callGroqAPI = async (userMessage) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ message: userMessage })
-      });
+      // Build conversation context from previous messages
+      const context = messages
+        .slice(-3) // Last 3 exchanges
+        .map(m => `${m.role === 'user' ? 'کسان' : 'مشیر'}: ${m.content}`)
+        .join('\n');
 
-      if (!response.ok) {
-        throw new Error('API error');
+      const prompt = context 
+        ? `${context}\nکسان: ${userMessage}`
+        : userMessage;
+
+      const response = await askAssistant(prompt);
+      
+      // Extract the answer from the response object
+      if (response && response.answer) {
+        return response.answer;
+      } else if (typeof response === 'string') {
+        return response;
       }
-
-      const data = await response.json();
-      console.log('API Response:', data);
-
-      return data.reply || data.response || 'معذرت! جواب موصول نہیں ہوا۔';
+      
+      return 'معذرت! جواب موصول نہیں ہوا۔';
     } catch (error) {
       console.error('Chat API error:', error);
+      return 'معذرت، میں اس وقت جواب نہیں دے سکتا۔ براہ کرم دوبارہ کوشش کریں۔';
     }
   };
 
@@ -456,8 +439,6 @@ const FarmerChatbot = () => {
 
   return (
     <div style={containerStyle}>
-      <audio ref={audioRef} style={{ display: 'none' }} />
-
       {/* Messages */}
       <div style={messagesWrapperStyle}>
         {messages.map((msg, idx) => {
@@ -593,11 +574,11 @@ const FarmerChatbot = () => {
           </div>
 
           <div style={noteBoxStyle}>
-            {/* <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#065f46' }}>
-              🎤 <span style={{ color: '#2563eb' }}>Whisper STT</span> +{' '}
-              <span style={{ color: '#7c3aed' }}>Llama 3.1 LLM</span> +{' '}
-              <span style={{ color: '#15803d' }}>Facebook MMS TTS</span>
-            </p> */}
+            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#065f46' }}>
+              🎤 <span style={{ color: '#2563eb' }}>Web Speech API</span> +{' '}
+              <span style={{ color: '#7c3aed' }}>Gemini AI</span> +{' '}
+              <span style={{ color: '#15803d' }}>Browser TTS</span>
+            </p>
             <p style={{ marginTop: 2, marginBottom: 0, fontSize: 13, color: '#4b5563' }}>
               💡 مکمل اردو آواز کا نظام - بولیں اور سنیں
             </p>

@@ -4,10 +4,9 @@ import VoiceRecorder from '../components/VoiceRecorder';
 import CropCalendar from '../components/CropCalendar';
 import VoiceOnboarding from '../components/VoiceOnboarding';
 import FarmerTraining from '../components/FarmerTraining';
-import FarmerChatbot from '../components/FarmerChatbot'; 
-import { FaSignOutAlt, FaUser, FaHistory, FaMicrophone, FaCalendarAlt, FaSeedling, FaBookReader, FaComments } from 'react-icons/fa';
 import DiseaseDetection from '../components/DiseaseDetection';
-import { FaSignOutAlt, FaUser, FaMicrophone, FaCalendarAlt, FaSeedling, FaBookReader } from 'react-icons/fa';
+import FarmerChatbot from '../components/Farmerchatbot';
+import { FaSignOutAlt, FaMicrophone, FaCalendarAlt, FaSeedling, FaBookReader, FaComments } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -93,10 +92,6 @@ const Dashboard = () => {
           <div className="flex gap-1 overflow-x-auto scrollbar-hide">
             <button
               onClick={() => setActiveTab('training')}
-              className={`flex items-center gap-2 px-6 py-4 font-semibold transition-all border-b-4 whitespace-nowrap ${activeTab === 'training'
-                  ? 'border-farm-green-600 text-farm-green-700'
-                  : 'border-transparent text-gray-500 hover:text-farm-green-600'
-                }`}
               className={`flex items-center gap-2 px-4 sm:px-6 py-4 sm:py-5 font-bold text-sm sm:text-base transition-all border-b-4 whitespace-nowrap rounded-t-xl ${
                 activeTab === 'training'
                   ? 'border-purple-600 text-purple-700 bg-gradient-to-b from-purple-50 to-white shadow-inner'
@@ -107,11 +102,6 @@ const Dashboard = () => {
               <span className="font-bold">🎓 تربیت</span>
             </button>
             <button
-              onClick={() => setActiveTab('calendar')}
-              className={`flex items-center gap-2 px-6 py-4 font-semibold transition-all border-b-4 whitespace-nowrap ${activeTab === 'calendar'
-                  ? 'border-farm-green-600 text-farm-green-700'
-                  : 'border-transparent text-gray-500 hover:text-farm-green-600'
-                }`}
               onClick={() => setActiveTab('disease')}
               className={`flex items-center gap-2 px-4 sm:px-6 py-4 sm:py-5 font-bold text-sm sm:text-base transition-all border-b-4 whitespace-nowrap rounded-t-xl ${
                 activeTab === 'disease'
@@ -123,11 +113,6 @@ const Dashboard = () => {
               <span className="font-bold">🔬 بیماری</span>
             </button>
             <button
-              onClick={() => setActiveTab('voice')}
-              className={`flex items-center gap-2 px-6 py-4 font-semibold transition-all border-b-4 whitespace-nowrap ${activeTab === 'voice'
-                  ? 'border-farm-green-600 text-farm-green-700'
-                  : 'border-transparent text-gray-500 hover:text-farm-green-600'
-                }`}
               onClick={() => setActiveTab('calendar')}
               className={`flex items-center gap-2 px-4 sm:px-6 py-4 sm:py-5 font-bold text-sm sm:text-base transition-all border-b-4 whitespace-nowrap rounded-t-xl ${
                 activeTab === 'calendar'
@@ -139,11 +124,6 @@ const Dashboard = () => {
               <span>📅 کیلنڈر</span>
             </button>
             <button
-              onClick={() => setActiveTab('history')}
-              className={`flex items-center gap-2 px-6 py-4 font-semibold transition-all border-b-4 whitespace-nowrap ${activeTab === 'history'
-                  ? 'border-farm-green-600 text-farm-green-700'
-                  : 'border-transparent text-gray-500 hover:text-farm-green-600'
-                }`}
               onClick={() => setActiveTab('voice')}
               className={`flex items-center gap-2 px-4 sm:px-6 py-4 sm:py-5 font-bold text-sm sm:text-base transition-all border-b-4 whitespace-nowrap rounded-t-xl ${
                 activeTab === 'voice'
@@ -156,13 +136,14 @@ const Dashboard = () => {
             </button>
             <button
               onClick={() => setActiveTab('chatbot')}
-              className={`flex items-center gap-2 px-6 py-4 font-semibold transition-all border-b-4 whitespace-nowrap ${activeTab === 'chatbot'
-                  ? 'border-farm-green-600 text-farm-green-700 bg-green-50'
-                  : 'border-transparent text-gray-500 hover:text-farm-green-600'
-                }`}
+              className={`flex items-center gap-2 px-4 sm:px-6 py-4 sm:py-5 font-bold text-sm sm:text-base transition-all border-b-4 whitespace-nowrap rounded-t-xl ${
+                activeTab === 'chatbot'
+                  ? 'border-blue-600 text-blue-700 bg-gradient-to-b from-blue-50 to-white shadow-inner'
+                  : 'border-transparent text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+              }`}
             >
-              <FaComments className="text-xl" />
-              چیٹ بوٹ
+              <FaComments className="text-xl sm:text-2xl" />
+              <span>💬 چیٹ بوٹ</span>
             </button>
             {!hasCalendar && (
               <button
@@ -217,10 +198,9 @@ const Dashboard = () => {
             )
           )}
           {activeTab === 'training' && <FarmerTraining />}
-          {activeTab === 'history' && <QueryHistory />}
-          {activeTab === 'chatbot' && <FarmerChatbot />}
           {activeTab === 'disease' && <DiseaseDetection />}
           {activeTab === 'voice' && <VoiceRecorder />}
+          {activeTab === 'chatbot' && <FarmerChatbot />}
         </motion.div>
       </main>
 
