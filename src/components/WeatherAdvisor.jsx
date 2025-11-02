@@ -110,37 +110,41 @@ IMPORTANT: Respond with *ONLY* valid JSON. No explanations, no markdown, no extr
 
       console.log('Generated prompt for AI:', prompt);
 
-      // Try Groq API (RECOMMENDED - Fast & Free)
-      if (import.meta.env.VITE_GROQ_API_KEY) {
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      // Try Google Gemini API (RECOMMENDED - Fast & Free with generous quota)
+      if (import.meta.env.VITE_GEMINI_API_KEY) {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`,
           },
           body: JSON.stringify({
-            model: 'llama-3.1-8b-instant',
-            messages: [
+            contents: [
               {
-                role: 'system',
-                content: 'You are an agricultural advisor. Output ONLY valid JSON matching the exact format in the user prompt. No other text, explanations, or markdown. Ensure proper escaping for newlines (\\n) and quotes.',
-              },
-              {
-                role: 'user',
-                content: prompt,
-              },
+                parts: [
+                  {
+                    text: `You are an agricultural advisor. Output ONLY valid JSON matching the exact format below. No other text, explanations, or markdown. Ensure proper escaping for newlines (\\n) and quotes.\n\n${prompt}`
+                  }
+                ]
+              }
             ],
-            temperature: 0.1,  // Lower temp for more deterministic JSON
-            max_tokens: 1500,   // Reduce to avoid rambling
+            generationConfig: {
+              temperature: 0.1,
+              maxOutputTokens: 1500,
+            }
           }),
         });
 
-        console.log('Groq API response status:', response.status);
+        console.log('Gemini API response status:', response.status);
 
         if (response.ok) {
           const data = await response.json();
-          console.log('Groq API full response:', data);
-          let content = data.choices[0].message.content.trim();
+          console.log('Gemini API full response:', data);
+          
+          if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+            throw new Error('Invalid Gemini API response format');
+          }
+          
+          let content = data.candidates[0].content.parts[0].text.trim();
 
          try {
   console.log('Trying direct JSON parse...');
