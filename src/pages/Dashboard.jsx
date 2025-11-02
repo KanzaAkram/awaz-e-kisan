@@ -6,7 +6,9 @@ import VoiceOnboarding from '../components/VoiceOnboarding';
 import FarmerTraining from '../components/FarmerTraining';
 import DiseaseDetection from '../components/DiseaseDetection';
 import FarmerChatbot from '../components/Farmerchatbot';
-import { FaSignOutAlt, FaMicrophone, FaCalendarAlt, FaSeedling, FaBookReader, FaComments } from 'react-icons/fa';
+import FertilizerOptimizer from '../components/FertilizerOptimizer';
+import WeatherAdvisor from '../components/WeatherAdvisor';
+import { FaSignOutAlt, FaMicrophone, FaCalendarAlt, FaSeedling, FaBookReader, FaComments, FaFlask, FaCloudSunRain } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -145,6 +147,28 @@ const Dashboard = () => {
               <FaComments className="text-xl sm:text-2xl" />
               <span>💬 چیٹ بوٹ</span>
             </button>
+            <button
+              onClick={() => setActiveTab('fertilizer')}
+              className={`flex items-center gap-2 px-4 sm:px-6 py-4 sm:py-5 font-bold text-sm sm:text-base transition-all border-b-4 whitespace-nowrap rounded-t-xl ${
+                activeTab === 'fertilizer'
+                  ? 'border-green-600 text-green-700 bg-gradient-to-b from-green-50 to-white shadow-inner'
+                  : 'border-transparent text-gray-600 hover:text-green-600 hover:bg-green-50'
+              }`}
+            >
+              <FaFlask className="text-xl sm:text-2xl" />
+              <span>🌱 کھاد</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('weather')}
+              className={`flex items-center gap-2 px-4 sm:px-6 py-4 sm:py-5 font-bold text-sm sm:text-base transition-all border-b-4 whitespace-nowrap rounded-t-xl ${
+                activeTab === 'weather'
+                  ? 'border-sky-600 text-sky-700 bg-gradient-to-b from-sky-50 to-white shadow-inner'
+                  : 'border-transparent text-gray-600 hover:text-sky-600 hover:bg-sky-50'
+              }`}
+            >
+              <FaCloudSunRain className="text-xl sm:text-2xl" />
+              <span>🌤️ موسم</span>
+            </button>
             {!hasCalendar && (
               <button
                 onClick={() => setShowOnboarding(true)}
@@ -201,6 +225,8 @@ const Dashboard = () => {
           {activeTab === 'disease' && <DiseaseDetection />}
           {activeTab === 'voice' && <VoiceRecorder />}
           {activeTab === 'chatbot' && <FarmerChatbot />}
+          {activeTab === 'fertilizer' && <FertilizerOptimizer />}
+          {activeTab === 'weather' && <WeatherAdvisor />}
         </motion.div>
       </main>
 

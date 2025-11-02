@@ -118,6 +118,17 @@ def get_supported_soils():
     soils = soil_encoder.classes_.tolist()
     return {"soils": soils, "count": len(soils)}
 
+@app.get("/supported-options")
+def get_supported_options():
+    crops = crop_encoder.classes_.tolist()
+    soils = soil_encoder.classes_.tolist()
+    return {
+        "crops": crops,
+        "soils": soils,
+        "crop_count": len(crops),
+        "soil_count": len(soils)
+    }
+
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "model_loaded": model is not None}

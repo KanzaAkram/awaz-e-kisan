@@ -3,7 +3,7 @@ import { mlService } from '../services/mlService';
 import './FertilizerOptimizer.css';
 import axios from 'axios';
 
-const FertilizerOptimizer = ({ onClose }) => {
+const FertilizerOptimizer = ({ onClose = null }) => {
     const [step, setStep] = useState('input');
     const [language, setLanguage] = useState('en');
     const [loading, setLoading] = useState(false);
@@ -253,7 +253,7 @@ const FertilizerOptimizer = ({ onClose }) => {
         <div className="fertilizer-optimizer">
             <div className="optimizer-header">
                 <h2>
-                    {language === 'en' ? 'Fertilizer Optimizer' : 'کھاد کا بہترین استعمال'}
+                    {language === 'en' ? 'AI-Powered Fertilizer Optimizer' : 'AI سے کھاد کا بہترین استعمال'}
                 </h2>
                 <div className="header-actions">
                     <button
@@ -262,7 +262,7 @@ const FertilizerOptimizer = ({ onClose }) => {
                     >
                         {language === 'en' ? 'اردو' : 'English'}
                     </button>
-                    <button className="close-btn" onClick={onClose}>×</button>
+                    {onClose && <button className="close-btn" onClick={onClose}>×</button>}
                 </div>
             </div>
 
