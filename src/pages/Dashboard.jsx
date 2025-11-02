@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import VoiceRecorder from '../components/VoiceRecorder';
-import QueryHistory from '../components/QueryHistory';
 import CropCalendar from '../components/CropCalendar';
 import VoiceOnboarding from '../components/VoiceOnboarding';
 import FarmerTraining from '../components/FarmerTraining';
-import { FaSignOutAlt, FaUser, FaHistory, FaMicrophone, FaCalendarAlt, FaSeedling, FaBookReader } from 'react-icons/fa';
+import DiseaseDetection from '../components/DiseaseDetection';
+import { FaSignOutAlt, FaUser, FaMicrophone, FaCalendarAlt, FaSeedling, FaBookReader } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -49,92 +49,97 @@ const Dashboard = () => {
   // }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-farm-green-50 via-white to-farm-green-50">
-      {/* Header */}
-      <header className="bg-white shadow-md">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-farm-green-700">
-              آوازِ کسان
-            </h1>
-            <p className="text-sm text-gray-600">Voice of the Farmer</p>
+    <div className="min-h-screen bg-gradient-to-br from-farm-green-50 via-white to-green-50">
+      {/* Improved Header with Farm Theme */}
+      <header className="bg-gradient-to-r from-farm-green-600 to-farm-green-700 shadow-xl sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="bg-white p-2 rounded-xl shadow-lg">
+              <FaSeedling className="text-3xl text-farm-green-600" />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-2">
+                آوازِ کسان
+              </h1>
+              <p className="text-xs sm:text-sm text-farm-green-100">Voice of the Farmer</p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="font-semibold text-farm-green-700">
-                {userData?.name || currentUser?.email}
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="hidden sm:block text-right bg-white/10 backdrop-blur-sm px-4 py-2 rounded-xl">
+              <p className="font-semibold text-white text-sm sm:text-base">
+                {userData?.name || currentUser?.email?.split('@')[0]}
               </p>
-              <p className="text-xs text-gray-500">
-                {userData?.language || 'Urdu'}
+              <p className="text-xs text-farm-green-100">
+                {userData?.language || 'اردو'}
               </p>
             </div>
             <button
               onClick={logout}
-              className="p-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-full transition-all"
-              title="Logout"
+              className="p-3 sm:p-4 bg-white/20 hover:bg-red-500 text-white rounded-xl transition-all shadow-lg hover:shadow-xl hover:scale-105"
+              title="باہر نکلیں / Logout"
             >
-              <FaSignOutAlt />
+              <FaSignOutAlt className="text-lg sm:text-xl" />
             </button>
           </div>
         </div>
       </header>
 
-      {/* Navigation Tabs */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex gap-1 overflow-x-auto">
+      {/* Improved Navigation Tabs - Larger & Touch-Friendly */}
+      <div className="bg-white shadow-md sticky top-16 sm:top-20 z-40">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4">
+          <div className="flex gap-1 overflow-x-auto scrollbar-hide">
             <button
               onClick={() => setActiveTab('training')}
-              className={`flex items-center gap-2 px-6 py-4 font-semibold transition-all border-b-4 whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 sm:px-6 py-4 sm:py-5 font-bold text-sm sm:text-base transition-all border-b-4 whitespace-nowrap rounded-t-xl ${
                 activeTab === 'training'
-                  ? 'border-blue-600 text-blue-700 bg-blue-50'
-                  : 'border-transparent text-gray-700 hover:text-blue-600 hover:bg-blue-50'
+                  ? 'border-purple-600 text-purple-700 bg-gradient-to-b from-purple-50 to-white shadow-inner'
+                  : 'border-transparent text-gray-600 hover:text-purple-600 hover:bg-purple-50'
               }`}
             >
               <FaBookReader className="text-xl" />
-              <span className="font-bold">🎓 تربیت و تعلیم</span>
+              <span className="font-bold">🎓 تربیت</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('disease')}
+              className={`flex items-center gap-2 px-4 sm:px-6 py-4 sm:py-5 font-bold text-sm sm:text-base transition-all border-b-4 whitespace-nowrap rounded-t-xl ${
+                activeTab === 'disease'
+                  ? 'border-red-600 text-red-700 bg-gradient-to-b from-red-50 to-white shadow-inner'
+                  : 'border-transparent text-gray-600 hover:text-red-600 hover:bg-red-50'
+              }`}
+            >
+              <FaSeedling className="text-xl" />
+              <span className="font-bold">🔬 بیماری</span>
             </button>
             <button
               onClick={() => setActiveTab('calendar')}
-              className={`flex items-center gap-2 px-6 py-4 font-semibold transition-all border-b-4 whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 sm:px-6 py-4 sm:py-5 font-bold text-sm sm:text-base transition-all border-b-4 whitespace-nowrap rounded-t-xl ${
                 activeTab === 'calendar'
-                  ? 'border-farm-green-600 text-farm-green-700'
-                  : 'border-transparent text-gray-500 hover:text-farm-green-600'
+                  ? 'border-farm-green-600 text-farm-green-700 bg-gradient-to-b from-farm-green-50 to-white shadow-inner'
+                  : 'border-transparent text-gray-600 hover:text-farm-green-600 hover:bg-farm-green-50'
               }`}
             >
-              <FaCalendarAlt />
-              فصل کیلنڈر
+              <FaCalendarAlt className="text-xl sm:text-2xl" />
+              <span>📅 کیلنڈر</span>
             </button>
             <button
               onClick={() => setActiveTab('voice')}
-              className={`flex items-center gap-2 px-6 py-4 font-semibold transition-all border-b-4 whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 sm:px-6 py-4 sm:py-5 font-bold text-sm sm:text-base transition-all border-b-4 whitespace-nowrap rounded-t-xl ${
                 activeTab === 'voice'
-                  ? 'border-farm-green-600 text-farm-green-700'
-                  : 'border-transparent text-gray-500 hover:text-farm-green-600'
+                  ? 'border-farm-green-600 text-farm-green-700 bg-gradient-to-b from-farm-green-50 to-white shadow-inner'
+                  : 'border-transparent text-gray-600 hover:text-farm-green-600 hover:bg-farm-green-50'
               }`}
             >
-              <FaMicrophone />
-              سوال پوچھیں
-            </button>
-            <button
-              onClick={() => setActiveTab('history')}
-              className={`flex items-center gap-2 px-6 py-4 font-semibold transition-all border-b-4 whitespace-nowrap ${
-                activeTab === 'history'
-                  ? 'border-farm-green-600 text-farm-green-700'
-                  : 'border-transparent text-gray-500 hover:text-farm-green-600'
-              }`}
-            >
-              <FaHistory />
-              تاریخ
+              <FaMicrophone className="text-xl sm:text-2xl" />
+              <span>🎤 سوال</span>
             </button>
             {!hasCalendar && (
               <button
                 onClick={() => setShowOnboarding(true)}
-                className="flex items-center gap-2 px-6 py-4 font-semibold transition-all border-b-4 whitespace-nowrap bg-green-50 border-green-500 text-green-700 animate-pulse"
+                className="flex items-center gap-2 px-4 sm:px-6 py-4 sm:py-5 font-bold text-sm sm:text-base transition-all border-b-4 whitespace-nowrap rounded-t-xl bg-gradient-to-r from-green-500 to-green-600 border-green-600 text-white shadow-lg hover:shadow-xl hover:scale-105 animate-pulse"
               >
-                <FaSeedling />
-                کیلنڈر بنائیں
+                <FaSeedling className="text-xl sm:text-2xl" />
+                <span>➕ کیلنڈر بنائیں</span>
               </button>
             )}
           </div>
@@ -180,9 +185,9 @@ const Dashboard = () => {
               </div>
             )
           )}
-          {activeTab === 'voice' && <VoiceRecorder />}
           {activeTab === 'training' && <FarmerTraining />}
-          {activeTab === 'history' && <QueryHistory />}
+          {activeTab === 'disease' && <DiseaseDetection />}
+          {activeTab === 'voice' && <VoiceRecorder />}
         </motion.div>
       </main>
 

@@ -1,6 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaPlay, FaPause, FaTimes, FaVolumeUp, FaVolumeMute, FaExpand, FaCompress } from 'react-icons/fa';
+import { FaPlay, FaPause, FaTimes, FaVolumeUp, FaVolumeMute, FaExpand, FaCompress, FaSeedling, FaRecycle, FaCloudSun } from 'react-icons/fa';
+import { GiWheat, GiFertilizerBag, GiWaterDrop } from 'react-icons/gi';
+
+// Icon mapping for topics
+const topicIcons = {
+  'organic-farming': <FaSeedling className="text-6xl" />,
+  'crop-rotation': <FaRecycle className="text-6xl" />,
+  'climate-smart': <FaCloudSun className="text-6xl" />,
+  'fertilizer': <GiFertilizerBag className="text-6xl" />,
+  'water-management': <GiWaterDrop className="text-6xl" />,
+  'wheat-farming': <GiWheat className="text-6xl" />,
+  'custom': <FaSeedling className="text-6xl" />,
+};
 
 const PodcastPlayer = ({ podcast, onClose }) => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -258,7 +270,9 @@ const PodcastPlayer = ({ podcast, onClose }) => {
                   <FaTimes />
                 </button>
               </div>
-              <div className="text-6xl">{podcast.icon}</div>
+              <div className="text-white">
+                {topicIcons[podcast.topicId] || topicIcons['custom']}
+              </div>
             </div>
 
             <h3 className="text-3xl font-bold mb-2" dir="rtl">

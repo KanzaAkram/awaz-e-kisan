@@ -103,9 +103,10 @@ const FarmerTraining = () => {
       contentEn: podcast.contentEn,
       audioUrl: podcast.audioUrl,
       duration: podcast.duration,
-      icon: podcast.icon,
+      topicId: podcast.topicId, // Store topic ID instead of icon
       color: podcast.color,
       timestamp: podcast.timestamp,
+      isCustom: podcast.isCustom,
     };
     
     const updated = [cleanPodcast, ...podcastHistory.slice(0, 9)]; // Keep last 10
@@ -152,7 +153,7 @@ const FarmerTraining = () => {
         contentEn: content.english,
         audioUrl: audioUrl || 'speech-synthesis:' + content.urdu,
         duration: topic.duration,
-        icon: topic.icon,
+        topicId: topic.id, // Store topic ID instead of icon component
         color: topic.color,
         timestamp: new Date().toISOString(),
       };
@@ -203,7 +204,7 @@ const FarmerTraining = () => {
         contentEn: content.english,
         audioUrl: audioUrl || 'speech-synthesis:' + content.urdu,
         duration: '~5 min',
-        icon: <FaMicrophone className="text-4xl" />,
+        topicId: 'custom', // Store topic ID instead of icon component
         color: 'from-pink-400 to-pink-600',
         timestamp: new Date().toISOString(),
         isCustom: true,
@@ -320,7 +321,9 @@ const FarmerTraining = () => {
                   <span className="bg-white bg-opacity-30 px-3 py-1 rounded-full text-sm font-semibold">
                     {topic.duration}
                   </span>
-                  {topic.icon}
+                  <div className="text-white">
+                    {topic.icon}
+                  </div>
                 </div>
 
                 <h4 className="text-2xl font-bold mb-2" dir="rtl">
@@ -398,29 +401,35 @@ const FarmerTraining = () => {
             🎧 سنے ہوئے پوڈکاسٹ
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {podcastHistory.map((podcast) => (
-              <motion.div
-                key={podcast.id}
-                whileHover={{ scale: 1.02 }}
-                onClick={() => handlePlayHistory(podcast)}
-                className="bg-white rounded-lg shadow p-4 cursor-pointer border-2 border-gray-200 hover:border-green-500 transition-all"
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`bg-gradient-to-br ${podcast.color} p-3 rounded-lg text-white`}>
-                    {podcast.icon}
+            {podcastHistory.map((podcast) => {
+              // Get icon based on topicId
+              const topic = trainingTopics.find(t => t.id === podcast.topicId);
+              const icon = podcast.isCustom ? <FaMicrophone className="text-4xl" /> : topic?.icon || <FaBookReader className="text-4xl" />;
+              
+              return (
+                <motion.div
+                  key={podcast.id}
+                  whileHover={{ scale: 1.02 }}
+                  onClick={() => handlePlayHistory(podcast)}
+                  className="bg-white rounded-lg shadow p-4 cursor-pointer border-2 border-gray-200 hover:border-green-500 transition-all"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`bg-gradient-to-br ${podcast.color} p-3 rounded-lg text-white`}>
+                      {icon}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-gray-800" dir="rtl">
+                        {podcast.title}
+                      </h4>
+                      <p className="text-sm text-gray-500">
+                        {new Date(podcast.timestamp).toLocaleDateString('ur-PK')}
+                      </p>
+                    </div>
+                    <FaPlay className="text-green-500" />
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-gray-800" dir="rtl">
-                      {podcast.title}
-                    </h4>
-                    <p className="text-sm text-gray-500">
-                      {new Date(podcast.timestamp).toLocaleDateString('ur-PK')}
-                    </p>
-                  </div>
-                  <FaPlay className="text-green-500" />
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       )}

@@ -63,18 +63,89 @@ body {
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #f0fdf4;
+  border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #22c55e;
-  border-radius: 4px;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  border-radius: 10px;
+  border: 2px solid #f0fdf4;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #16a34a;
+  background: linear-gradient(135deg, #16a34a, #15803d);
+}
+
+/* Farmer-Friendly Button Styles */
+@layer components {
+  .btn-primary {
+    @apply bg-gradient-to-r from-farm-green-500 to-farm-green-600 
+           text-white font-bold py-3 px-6 rounded-xl 
+           shadow-lg hover:shadow-xl hover:scale-105 
+           transition-all duration-300 
+           border-2 border-farm-green-600;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-farm-green-700 font-bold py-3 px-6 rounded-xl 
+           shadow-md hover:shadow-lg hover:scale-105 
+           transition-all duration-300 
+           border-2 border-farm-green-200;
+  }
+
+  .card {
+    @apply bg-white rounded-2xl shadow-lg hover:shadow-2xl 
+           transition-all duration-300 p-6 border border-farm-green-100;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl border-2 border-farm-green-200 
+           focus:border-farm-green-500 focus:ring-4 focus:ring-farm-green-100 
+           outline-none transition-all duration-300 text-lg;
+  }
+}
+
+/* Large, Touch-Friendly Elements for Farmers */
+button {
+  min-height: 44px; /* Minimum touch target size */
+}
+
+input, select, textarea {
+  font-size: 16px; /* Prevents zoom on iOS */
+}
+
+/* Loading Animation */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Shake Animation for Errors */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Success Pulse */
+@keyframes success-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.9; }
+}
+
+.animate-success {
+  animation: success-pulse 0.6s ease-in-out;
 }
