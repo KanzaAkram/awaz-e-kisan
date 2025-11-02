@@ -392,7 +392,7 @@ const FertilizerOptimizer = ({ onClose }) => {
                             </>
                         ) : (
                             <>
-                                🌾 {language === 'en' ? 'Get AI Recommendation' : 'AI تجویز حاصل کریں'}
+                                🌾 {language === 'en'   ? 'Get AI-Based Suggestion'   : 'AI پر مبنی تجویز حاصل کریں'}
                             </>
                         )}
                     </button>
@@ -424,7 +424,7 @@ const FertilizerOptimizer = ({ onClose }) => {
                         </div>
 
                         <div className="recommended-fertilizer">
-                            <h3>{language === 'en' ? 'Recommended Fertilizer' : 'تجویز کردہ کھاد'}</h3>
+                            <h3>{language === 'en' ? 'Suggested Fertilizer' : 'تجویز کردہ کھاد'}</h3>
                             <div className="fertilizer-name">
                                 <span className="fertilizer-icon">🌱</span>
                                 <div>
