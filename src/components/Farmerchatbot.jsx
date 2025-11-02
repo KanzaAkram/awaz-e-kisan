@@ -17,6 +17,10 @@ const FarmerChatbot = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showQuickQuestions, setShowQuickQuestions] = useState(true);
   const messagesEndRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+
+  const SPEECHMATICS_API_KEY = 'GNEbOh8fH9X96bKgCuvVqTgkZwuPyDW3';
 
   const quickQuestions = [
     '🌾 گندم کی کاشت کا بہترین وقت؟',
@@ -33,57 +37,152 @@ const FarmerChatbot = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Use Web Speech API for speech recognition
-  const recognitionRef = useRef(null);
-
-  useEffect(() => {
-    // Initialize Web Speech API
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
-      recognitionRef.current.lang = 'ur-PK'; // Urdu language
-    }
-  }, []);
-
-  // Start recording audio using Web Speech API
-  const startRecording = () => {
-    if (!recognitionRef.current) {
-      alert('معذرت! آپ کا براؤزر آواز کی پہچان کی سہولت فراہم نہیں کرتا۔');
-      return;
-    }
-
+  // Transcribe audio using Speechmatics Batch API
+  const transcribeAudioWithSpeechmatics = async (audioBlob) => {
     try {
-      recognitionRef.current.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        setInput(transcript);
-        setIsRecording(false);
+      console.log('🎤 Transcribing with Speechmatics...');
+      console.log('Audio blob size:', audioBlob.size, 'bytes');
+
+      // Convert webm to wav if needed (Speechmatics prefers wav/mp3)
+      const formData = new FormData();
+      formData.append('data_file', audioBlob, 'audio.webm');
+      
+      // Speechmatics config as separate field
+      const config = {
+        type: 'transcription',
+        transcription_config: {
+          language: 'ur',
+          operating_point: 'enhanced',
+          diarization: 'none'
+        }
+      };
+      
+      formData.append('config', JSON.stringify(config));
+
+      console.log('Sending to Speechmatics...');
+      
+      const response = await fetch('https://asr.api.speechmatics.com/v2/jobs', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${SPEECHMATICS_API_KEY}`,
+        },
+        body: formData
+      });
+
+      console.log('Response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Speechmatics error response:', errorText);
+        throw new Error(`Speechmatics API error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Speechmatics job created:', result);
+
+      // The batch API returns a job ID, we need to poll for results
+      const jobId = result.id;
+      
+      // Poll for transcription results
+      return await pollTranscriptionResult(jobId);
+
+    } catch (error) {
+      console.error('❌ Speechmatics error:', error);
+      throw error;
+    }
+  };
+
+  // Poll for transcription results
+  const pollTranscriptionResult = async (jobId, maxAttempts = 30) => {
+    for (let i = 0; i < maxAttempts; i++) {
+      try {
+        const response = await fetch(`https://asr.api.speechmatics.com/v2/jobs/${jobId}/transcript`, {
+          headers: {
+            'Authorization': `Bearer ${SPEECHMATICS_API_KEY}`,
+            'Accept': 'application/json'
+          }
+        });
+
+        if (response.status === 200) {
+          const result = await response.json();
+          console.log('✅ Transcription complete:', result);
+          
+          // Extract text from results
+          if (result.results && result.results.length > 0) {
+            const transcript = result.results
+              .map(r => r.alternatives && r.alternatives[0] ? r.alternatives[0].content : '')
+              .filter(text => text.trim())
+              .join(' ');
+            
+            if (transcript) {
+              return transcript;
+            }
+          }
+          
+          throw new Error('No transcript in response');
+        } else if (response.status === 404) {
+          // Job still processing, wait and retry
+          console.log(`Waiting for transcription... (attempt ${i + 1}/${maxAttempts})`);
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+        } else {
+          const errorText = await response.text();
+          console.error('Poll error:', errorText);
+          throw new Error(`Failed to get transcript: ${response.status}`);
+        }
+      } catch (error) {
+        if (i === maxAttempts - 1) {
+          throw error;
+        }
+        console.log('Retrying...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+    
+    throw new Error('Transcription timeout');
+  };
+
+  // Start recording audio
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
       };
 
-      recognitionRef.current.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        alert('معذرت! آواز کو سمجھنے میں مشکل ہوئی۔ براہ کرم دوبارہ کوشش کریں۔');
-        setIsRecording(false);
+      mediaRecorderRef.current.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+
+        // Transcribe using Speechmatics
+        setIsLoading(true);
+        try {
+          const transcription = await transcribeAudioWithSpeechmatics(audioBlob);
+          setInput(transcription);
+        } catch (error) {
+          alert('معذرت! آواز کو سمجھنے میں مشکل ہوئی۔ براہ کرم دوبارہ کوشش کریں۔');
+        }
+        setIsLoading(false);
+
+        // Stop all tracks
+        stream.getTracks().forEach((track) => track.stop());
       };
 
-      recognitionRef.current.onend = () => {
-        setIsRecording(false);
-      };
-
-      recognitionRef.current.start();
+      mediaRecorderRef.current.start();
       setIsRecording(true);
     } catch (error) {
       console.error('Recording error:', error);
       alert('معذرت! مائیکروفون تک رسائی نہیں ہو سکی۔ براہ کرم اجازت دیں۔');
-      setIsRecording(false);
     }
   };
 
   // Stop recording
   const stopRecording = () => {
-    if (recognitionRef.current && isRecording) {
-      recognitionRef.current.stop();
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
       setIsRecording(false);
     }
   };
