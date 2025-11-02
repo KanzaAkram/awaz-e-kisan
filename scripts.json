@@ -1,0 +1,6 @@
+{
+  "scripts": {
+    "setup": "powershell -ExecutionPolicy Bypass -File ./setup.ps1",
+    "check": "node --version && firebase --version && npm --version"
+  }
+}
